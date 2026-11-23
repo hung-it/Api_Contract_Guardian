@@ -28,6 +28,7 @@ public sealed class SpecLoaderTests : IDisposable
     [Theory]
     [InlineData(".json", """{"openapi":"3.1.0","openapi":"3.0.3"}""", "duplicate")]
     [InlineData(".json", """{"openapi":"3.1.0","paths":,}""", "syntax")]
+    [InlineData(".json", """{"openapi":"3.1.0","info":{"title":"\uD800"}}""", "syntax")]
     [InlineData(".json", """["3.1.0"]""", "object")]
     [InlineData(".json", """{"openapi":3.1}""", "version")]
     [InlineData(".json", """{"paths":{}}""", "version")]

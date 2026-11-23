@@ -38,6 +38,11 @@ switch (args)
             Console.Write("invalid JSON");
             return 0;
         }
+        if (spec.Contains("invalid-output-string", StringComparison.Ordinal))
+        {
+            Console.Write("""[{"id":"\uD800","level":1}]""");
+            return 0;
+        }
 
         Console.Write("[]");
         return 0;
@@ -47,7 +52,12 @@ switch (args)
             return 8;
         }
 
-        Console.Write("[]");
+        var candidate = File.ReadAllText(args[^1]);
+        Console.Write(candidate.Contains("malformed-changelog", StringComparison.Ordinal)
+            ? "incomplete JSON"
+            : candidate.Contains("unmapped-changelog", StringComparison.Ordinal)
+                ? """[{"id":"unmapped-rule","level":2,"text":"Needs review","fingerprint":"abcd56780000"}]"""
+                : "[]");
         return 0;
     default:
         return 8;

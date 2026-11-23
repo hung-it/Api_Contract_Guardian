@@ -1,6 +1,6 @@
 # API Contract Guardian
 
-API Contract Guardian is a .NET CLI project for checking backward compatibility between OpenAPI versions in GitLab merge request pipelines. The first milestone provides the CLI entry point, a stable exit-code contract, and repeatable probes against a pinned diff engine.
+API Contract Guardian is a .NET CLI that validates local OpenAPI documents and detects backward compatibility changes with a pinned diff engine.
 
 ## Quick start
 
@@ -22,25 +22,38 @@ Run the CLI smoke tests and OpenAPI probes in PowerShell with `tar` available. T
 & ./scripts/verify-cli.ps1
 $engine = & ./scripts/install-oasdiff.ps1
 & ./scripts/probe-oasdiff.ps1 -Engine $engine
+& ./scripts/verify-contracts.ps1 -Engine $engine
 ```
+
+Set `GUARDIAN_OASDIFF_PATH` to the absolute path of the installed engine. Then run Guardian against a spec or a pair of specs.
+
+```powershell
+$env:GUARDIAN_OASDIFF_PATH = $engine
+dotnet artifacts/guardian/guardian.dll validate examples/base.yaml
+dotnet artifacts/guardian/guardian.dll compare --base examples/base.yaml --candidate examples/breaking.yaml
+```
+
+The CLI accepts single-file UTF-8 JSON, YAML or YML using OpenAPI 3.0.x or 3.1.x. Compare uses pairs from the same minor version. Input limits are 5 MiB, 64 levels and 2,048 references per file. References use internal JSON Pointers and the default schema dialect. The supported YAML subset uses unique scalar keys and plain YAML without aliases, merge keys or explicit tags. Reusable `components.pathItems` and dynamic schema references are outside the current support matrix.
+
+Compare writes one JSON object to stdout with the engine version and sorted findings. Findings include the rule, severity, endpoint, source coordinates when available, and a stable fingerprint. The fingerprint excludes the message and source coordinates. Invalid input and engine failures write a diagnostic to stderr.
 
 | Exit code | Meaning |
 |---|---|
 | `0` | Success |
 | `1` | Invalid command-line arguments |
-| `2` | Compatibility policy failed |
+| `2` | Compare found a breaking or unknown change |
 | `3` | Invalid or unsupported spec |
 | `4` | Diff engine or internal error |
 | `5` | Invalid or untrusted policy |
 
-The help and version commands use codes `0` and `1`. Core reserves codes `2` through `5` for the compatibility gate.
+The help and version commands use codes `0` and `1`. Code `5` is reserved for policy validation.
 
 ## FlowForge contract probe
 
 Use an isolated FlowForge checkout of commit `05d7e7c6830474cc17dbf0d1758da290fa8497c7`. From its `backend` directory, use `uv sync --frozen --python 3.12`, then run `uv run --frozen python <Guardian>/scripts/export-flowforge.py <output-directory>`.
 
-The script exports OpenAPI twice, checks that the bytes match and that each reference resolves inside the document, then writes a second contract with an integer `RunOutput.run_id`. Run `probe-oasdiff.ps1 -Engine $engine -FlowForgeContracts <output-directory>` from Guardian to check the unchanged and breaking comparisons.
+The script exports OpenAPI twice, checks that the bytes match and that each reference resolves inside the document, then writes a second contract with an integer `RunOutput.run_id`. Run `verify-contracts.ps1 -Engine $engine -FlowForgeContracts <output-directory>` from Guardian to check the unchanged and breaking comparisons through the published CLI.
 
 ## CI
 
-[GitHub](https://github.com/hung-it/Api_Contract_Guardian) is the source repository. Push the same verification commit to [GitLab](https://gitlab.com/hung-it/api_contract_guardian), then confirm that the pipeline ran on the same full SHA. The `week1` job uses a fresh Linux checkout and publishes the CLI, xUnit test results, and engine output as artifacts.
+[GitHub](https://github.com/hung-it/Api_Contract_Guardian) is the source repository. Push the same verification commit to [GitLab](https://gitlab.com/hung-it/api_contract_guardian), then confirm that the pipeline ran on the same full SHA. The `verify` job uses a fresh Linux checkout and publishes the CLI, xUnit results, engine probes and Guardian comparison results as artifacts.

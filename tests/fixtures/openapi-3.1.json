@@ -1,0 +1,62 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Workflow Tasks",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/tasks": {
+      "get": {
+        "operationId": "listTasks",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A task",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TaskResult" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createTask",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["mode"],
+                "properties": {
+                  "mode": { "type": "string", "enum": ["quick", "full"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "204": { "description": "Task accepted" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "TaskResult": {
+        "type": "object",
+        "required": ["task_id", "state"],
+        "properties": {
+          "task_id": { "type": "string" },
+          "state": { "type": "string" }
+        }
+      }
+    }
+  }
+}

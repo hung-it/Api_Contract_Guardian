@@ -65,13 +65,15 @@ public sealed class EngineProcessTests
             TestDocument(marker), null, CancellationToken.None));
     }
 
-    [Fact]
-    public async Task RejectsMalformedValidationOutput()
+    [Theory]
+    [InlineData("broken-output")]
+    [InlineData("invalid-output-string")]
+    public async Task RejectsMalformedValidationOutput(string marker)
     {
         var adapter = new OasdiffAdapter(TestEngine);
 
         await Assert.ThrowsAsync<EngineException>(() => adapter.AnalyzeAsync(
-            TestDocument("broken-output"), null, CancellationToken.None));
+            TestDocument(marker), null, CancellationToken.None));
     }
 
     [Fact]

@@ -102,7 +102,7 @@ internal sealed class OasdiffAdapter(string? executable)
     {
         try
         {
-            using var document = JsonDocument.Parse(output);
+            using var document = JsonDocument.Parse(output, new JsonDocumentOptions { AllowDuplicateProperties = false });
             if (document.RootElement.ValueKind != JsonValueKind.Array)
             {
                 throw new EngineException("oasdiff returned invalid validation JSON.");
@@ -127,7 +127,7 @@ internal sealed class OasdiffAdapter(string? executable)
 
             return errorRule;
         }
-        catch (JsonException)
+        catch (Exception error) when (error is JsonException or InvalidOperationException)
         {
             throw new EngineException("oasdiff returned invalid validation JSON.");
         }

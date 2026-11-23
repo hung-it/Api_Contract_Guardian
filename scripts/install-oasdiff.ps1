@@ -6,7 +6,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $version = '1.38.0'
-$platform = if ($env:OS -eq 'Windows_NT') { 'windows' } else { 'linux' }
+$platform = if ([IO.Path]::DirectorySeparatorChar -eq '\') { 'windows' } else { 'linux' }
 $checksum = @{
     windows = '4509a5d838849ab39c759b6ed95a0b9193b80a69e55b88c6c9e72d7bde21bbcf'
     linux = '613037fd6a1d3362a1b742d6d86c338c0eb5ab3511f4942ce3948e78720ea2da'

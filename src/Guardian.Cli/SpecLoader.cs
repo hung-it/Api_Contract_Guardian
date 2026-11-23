@@ -113,7 +113,7 @@ internal static class SpecLoader
                 }
             }
         }
-        catch (JsonException)
+        catch (Exception error) when (error is JsonException or InvalidOperationException)
         {
             throw new SpecInputException("Invalid JSON syntax or nesting depth.");
         }
