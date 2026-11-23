@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Guardian.Cli/Guardian.Cli.csproj" />
+    <Project Path="src/Guardian.Core/Guardian.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Guardian.Core.Tests/Guardian.Core.Tests.csproj" />
+  </Folder>
+</Solution>

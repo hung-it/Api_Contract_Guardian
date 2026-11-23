@@ -1,0 +1,19 @@
+openapi: 3.0.3
+info:
+  title: Guardian Example
+  version: 1.0.0
+paths:
+  /runs:
+    get:
+      operationId: getRun
+      responses:
+        '200':
+          description: A workflow run
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [run_id]
+                properties:
+                  run_id:
+                    type: string

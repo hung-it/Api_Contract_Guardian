@@ -1,0 +1,22 @@
+stages: [check]
+
+week1:
+  stage: check
+  image: mcr.microsoft.com/dotnet/sdk:10.0.201-noble
+  variables:
+    GIT_STRATEGY: clone
+  script:
+    - dotnet --info
+    - dotnet restore Guardian.slnx --locked-mode
+    - dotnet build Guardian.slnx -c Release --no-restore -warnaserror
+    - dotnet format Guardian.slnx --verify-no-changes --no-restore
+    - dotnet test Guardian.slnx -c Release --no-build --logger trx --results-directory artifacts/tests
+    - dotnet publish src/Guardian.Cli -c Release --no-build -o artifacts/guardian
+    - pwsh -NoProfile -File scripts/verify-cli.ps1
+    - pwsh -NoProfile -Command '$engine = & ./scripts/install-oasdiff.ps1; & ./scripts/probe-oasdiff.ps1 -Engine $engine'
+  artifacts:
+    when: always
+    paths:
+      - artifacts/tests/
+      - artifacts/guardian/
+      - artifacts/oasdiff/

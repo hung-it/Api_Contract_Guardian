@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>guardian</AssemblyName>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Guardian.Core/Guardian.Core.csproj" />
+  </ItemGroup>
+</Project>
