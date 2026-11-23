@@ -26,7 +26,9 @@ function Compare-Spec([string]$Base, [string]$Candidate, [string]$Name) {
     Set-Content -Encoding UTF8 -LiteralPath (Join-Path $OutputDirectory "$Name.json") -Value $json
     if ($json.Trim() -eq 'null') { return }
     if (-not $json.TrimStart().StartsWith('[')) { throw "Expected a JSON array for $Name." }
-    ConvertFrom-Json -InputObject $json
+    foreach ($finding in (ConvertFrom-Json -InputObject $json)) {
+        $finding
+    }
 }
 
 $examples = Join-Path $PSScriptRoot '../examples'
@@ -36,6 +38,10 @@ $breaking = Join-Path $examples 'breaking.yaml'
 Test-Spec $baseline
 Test-Spec $compatible
 Test-Spec $breaking
+
+if (@(Compare-Spec $baseline $baseline 'unchanged').Count -ne 0) {
+    throw 'Expected no findings when comparing the sample contract with itself.'
+}
 
 $changes = @(Compare-Spec $baseline $compatible 'compatible')
 if (($changes | Where-Object { $_.level -ge 3 }) -or -not ($changes | Where-Object {
