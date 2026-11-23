@@ -61,3 +61,7 @@ The script exports OpenAPI twice, checks that the bytes match and that each refe
 ## CI
 
 [GitHub](https://github.com/hung-it/Api_Contract_Guardian) is the source repository. Push the same verification commit to [GitLab](https://gitlab.com/hung-it/api_contract_guardian), then confirm that the pipeline ran on the same full SHA. The `verify` job uses a fresh Linux checkout and publishes the CLI, xUnit results, engine probes and Guardian comparison results as artifacts.
+
+The protected `main` branch publishes the Linux AMD64 CLI image on changes to the build inputs. The detached merge-request demo runs `api_contract_guard` using a registry digest. The job reads the baseline and policy from one fetched commit of its protected target and reads the candidate from the pipeline commit. Open both reports in the job's `reports/` artifact to inspect the verdict, source commits and input hashes.
+
+The trust demonstrated here covers the source of the baseline and policy. Independent enforcement of the job configuration and required merge checks are Week 4 acceptance criteria.

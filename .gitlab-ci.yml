@@ -1,10 +1,19 @@
 stages: [check, package]
 
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      when: never
+    - if: '$CI_COMMIT_BRANCH'
+
 verify:
   stage: check
   image: mcr.microsoft.com/dotnet/sdk:10.0.201-noble
   variables:
     GIT_STRATEGY: clone
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH'
   script:
     - dotnet --info
     - dotnet restore Guardian.slnx --locked-mode
@@ -45,3 +54,17 @@ publish_cli:
     - sh scripts/publish-cli.sh
   artifacts:
     paths: [artifacts/image-metadata.json]
+
+api_contract_guard:
+  stage: check
+  image:
+    name: registry.gitlab.com/hung-it/api_contract_guardian/guardian-cli@sha256:f134c35b8d890a09a3fd8069f388f3e9b5ce3e0f736076134fcf82c55f31da37
+    entrypoint: [""]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_EVENT_TYPE == "detached" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID == $CI_PROJECT_ID && ($CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "demo/week3-missing-baseline")'
+  script:
+    - sh scripts/check-merge-request.sh
+  artifacts:
+    when: always
+    paths: [reports/]
+    expire_in: 14 days
