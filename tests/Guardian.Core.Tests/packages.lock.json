@@ -107,6 +107,9 @@
       },
       "guardian.core": {
         "type": "Project"
+      },
+      "guardian.testengine": {
+        "type": "Project"
       }
     }
   }
