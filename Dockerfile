@@ -1,9 +1,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0.201-noble@sha256:127d7d4d601ae26b8e04c54efb37e9ce8766931bded0ee59fcd799afd21d6850 AS build
 WORKDIR /source
+ENV DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE=true
 COPY global.json Directory.Build.props ./
 COPY src/ src/
-RUN dotnet restore src/Guardian.Cli --locked-mode \
-    && dotnet publish src/Guardian.Cli -c Release --no-restore -o /publish
+RUN dotnet restore src/Guardian.Cli --locked-mode --disable-build-servers \
+    && dotnet publish src/Guardian.Cli -c Release --no-restore --disable-build-servers -o /publish
 COPY scripts/install-oasdiff.ps1 /tmp/install-oasdiff.ps1
 RUN pwsh -NoProfile -File /tmp/install-oasdiff.ps1 -Destination /engine
 
