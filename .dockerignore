@@ -1,0 +1,9 @@
+**
+!global.json
+!Directory.Build.props
+!src/
+!src/**
+!scripts/
+!scripts/install-oasdiff.ps1
+**/bin/
+**/obj/

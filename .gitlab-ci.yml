@@ -1,4 +1,4 @@
-stages: [check]
+stages: [check, package]
 
 verify:
   stage: check
@@ -13,7 +13,7 @@ verify:
     - dotnet test Guardian.slnx -c Release --no-build --logger trx --results-directory artifacts/tests
     - dotnet publish src/Guardian.Cli -c Release --no-build -o artifacts/guardian
     - pwsh -NoProfile -File scripts/verify-cli.ps1
-    - pwsh -NoProfile -Command '$engine = & ./scripts/install-oasdiff.ps1; & ./scripts/probe-oasdiff.ps1 -Engine $engine; & ./scripts/verify-contracts.ps1 -Engine $engine'
+    - pwsh -NoProfile -Command '$engine = & ./scripts/install-oasdiff.ps1; & ./scripts/probe-oasdiff.ps1 -Engine $engine; & ./scripts/verify-contracts.ps1 -Engine $engine; & ./scripts/verify-policy.ps1 -Engine $engine'
   artifacts:
     when: always
     paths:
@@ -21,3 +21,38 @@ verify:
       - artifacts/guardian/
       - artifacts/oasdiff/
       - artifacts/contract-tests/results/
+      - artifacts/policy-tests/*/report.json
+      - artifacts/policy-tests/*/report.md
+
+publish_cli:
+  stage: package
+  image:
+    name: moby/buildkit:v0.35.1-rootless@sha256:7d02292556e66feea6d2d89b7ec143503b57e4f59a4efc6b7ece8547e4d3e5be
+    entrypoint: [""]
+  variables:
+    BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_REF_PROTECTED == "true"'
+      changes:
+        - Dockerfile
+        - .dockerignore
+        - global.json
+        - Directory.Build.props
+        - scripts/install-oasdiff.ps1
+        - src/**/*
+  script:
+    - |
+      set -eu
+      export DOCKER_CONFIG="$(mktemp -d)"
+      trap 'rm -f "$DOCKER_CONFIG/config.json"; rmdir "$DOCKER_CONFIG"' EXIT
+      umask 077
+      auth="$(printf '%s:%s' "$CI_REGISTRY_USER" "$CI_REGISTRY_PASSWORD" | base64 | tr -d '\n')"
+      printf '{"auths":{"%s":{"auth":"%s"}}}\n' "$CI_REGISTRY" "$auth" > "$DOCKER_CONFIG/config.json"
+      mkdir -p artifacts
+      buildctl-daemonless.sh build \
+        --frontend dockerfile.v0 --local context=. --local dockerfile=. \
+        --opt platform=linux/amd64 --opt "build-arg:GUARDIAN_SOURCE_SHA=$CI_COMMIT_SHA" \
+        --output "type=image,name=$CI_REGISTRY_IMAGE/guardian-cli:cli-$CI_COMMIT_SHA,push=true" \
+        --metadata-file artifacts/image-metadata.json
+  artifacts:
+    paths: [artifacts/image-metadata.json]
