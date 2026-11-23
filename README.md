@@ -33,6 +33,10 @@ dotnet artifacts/guardian/guardian.dll validate examples/base.yaml
 dotnet artifacts/guardian/guardian.dll compare --base examples/base.yaml --candidate examples/breaking.yaml
 ```
 
+Add `--policy .guardian.yml --out artifacts/reports` to write JSON and Markdown reports. The v1 policy uses a severity threshold from `compatibility.fail_on` (for example, `[WARN]` blocks WARN and ERR). `compatibility.fail_on_unknown` controls whether an unknown finding blocks the comparison. Optional `rules` set an effective severity for known rule IDs before evaluation. The built-in policy blocks ERR and UNKNOWN.
+
+Both report formats include the verdict, input hashes when available, and engine and Guardian versions. CI provides baseline and candidate commits and its pipeline ID. See the [JSON report schema](schemas/report-v1.schema.json).
+
 The CLI accepts single-file UTF-8 JSON, YAML or YML using OpenAPI 3.0.x or 3.1.x. Compare uses pairs from the same minor version. Input limits are 5 MiB, 64 levels and 2,048 references per file. References use internal JSON Pointers and the default schema dialect. The supported YAML subset uses unique scalar keys and plain YAML without aliases, merge keys or explicit tags. Reusable `components.pathItems` and dynamic schema references are outside the current support matrix.
 
 Compare writes one JSON object to stdout with the engine version and sorted findings. Findings include the rule, severity, endpoint, source coordinates when available, and a stable fingerprint. The fingerprint excludes the message and source coordinates. Invalid input and engine failures write a diagnostic to stderr.
@@ -44,9 +48,9 @@ Compare writes one JSON object to stdout with the engine version and sorted find
 | `2` | Compare found a breaking or unknown change |
 | `3` | Invalid or unsupported spec |
 | `4` | Diff engine or internal error |
-| `5` | Invalid or untrusted policy |
+| `5` | Invalid or missing explicit policy |
 
-The help and version commands use codes `0` and `1`. Code `5` is reserved for policy validation.
+The help and version commands use codes `0` and `1`. With `--out`, validation, engine and policy failures produce an `INDETERMINATE` report with a diagnostic.
 
 ## FlowForge contract probe
 

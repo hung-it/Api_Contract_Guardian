@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Guardian analysis report v1",
+  "type": "object",
+  "required": ["schema_version", "status", "engine", "engine_version", "summary", "findings", "provenance", "diagnostics"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "status": { "enum": ["PASS", "FAIL", "INDETERMINATE"] },
+    "engine": { "type": "string" },
+    "engine_version": { "type": "string" },
+    "summary": {
+      "type": "object",
+      "required": ["errors", "warnings", "info", "unknown"],
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["rule_id", "severity", "message", "fingerprint"],
+        "properties": {
+          "rule_id": { "type": "string" },
+          "severity": { "enum": ["ERR", "WARN", "INFO", "UNKNOWN"] },
+          "message": { "type": "string" },
+          "fingerprint": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["guardian_version", "diff_engine", "diff_engine_version", "baseline_sha256", "candidate_sha256", "policy_sha256", "baseline_commit_sha", "candidate_commit_sha", "pipeline_id"],
+      "properties": {
+        "guardian_version": { "type": "string" },
+        "diff_engine": { "type": "string" },
+        "diff_engine_version": { "type": "string" },
+        "baseline_sha256": { "$ref": "#/$defs/hash" },
+        "candidate_sha256": { "$ref": "#/$defs/hash" },
+        "policy_sha256": { "$ref": "#/$defs/hash" },
+        "baseline_commit_sha": { "type": ["string", "null"] },
+        "candidate_commit_sha": { "type": ["string", "null"] },
+        "pipeline_id": { "type": ["string", "null"] }
+      }
+    }
+  },
+  "$defs": {
+    "hash": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}
