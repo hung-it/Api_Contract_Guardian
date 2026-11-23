@@ -7,18 +7,6 @@ namespace Guardian.Cli;
 
 internal static class FindingNormalizer
 {
-    private static readonly HashSet<string> KnownRules = new(StringComparer.Ordinal)
-    {
-        "endpoint-added",
-        "api-path-removed-without-deprecation",
-        "api-removed-without-deprecation",
-        "request-parameter-became-required",
-        "new-required-request-property",
-        "request-property-enum-value-removed",
-        "response-property-type-changed",
-        "response-required-property-removed",
-    };
-
     internal static ContractFinding[] Parse(byte[] output)
     {
         try
@@ -63,7 +51,7 @@ internal static class FindingNormalizer
         var section = OptionalString(entry, "section");
         string?[] identity = ["guardian-finding-v1", "oasdiff", id, method, path, section, upstreamFingerprint];
         var hash = SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(identity));
-        var severity = KnownRules.Contains(id) ? (FindingSeverity)level : FindingSeverity.UNKNOWN;
+        var severity = CompatibilityPolicy.IsKnownRule(id) ? (FindingSeverity)level : FindingSeverity.UNKNOWN;
 
         return new ContractFinding(id, severity, method, path, section,
             ReadLocation(entry, "baseSource"), ReadLocation(entry, "revisionSource"), message,
