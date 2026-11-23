@@ -6,5 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Guardian.Core/Guardian.Core.csproj" />
+    <InternalsVisibleTo Include="Guardian.Core.Tests" />
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 </Project>

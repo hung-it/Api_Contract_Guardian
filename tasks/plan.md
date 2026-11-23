@@ -68,3 +68,10 @@ CV sau khi kiểm chứng integration có thể dùng câu sau:
 
 - [Thiết kế kỹ thuật Guardian](../../API_Contract_Guardian_Technical_Design_and_Roadmap.md), xem mục 3, 8–12, 17–18 và 22–25.
 - [Roadmap tổng thể 18 tuần](../../Roadmap_FlowForge_API_Contract_Guardian_AWS_Optional.docx), xem phần II và III.
+
+## Tiến độ thực hiện
+
+| Mốc | Trạng thái | Thay đổi và bằng chứng |
+|---|---|---|
+| Tuần 1 · T01–T05 | Hoàn thành | GitHub/GitLab cùng SHA `f59099a`. Build, 5 xUnit cases, 5 CLI smoke cases và probes oasdiff đều qua. [Pipeline GitLab](https://gitlab.com/hung-it/api_contract_guardian/-/pipelines/3102928132) · [Chi tiết](../docs/week-1-verification.md) |
+| Tuần 2 · T06 | Hoàn thành | Đọc spec JSON/YAML local có giới hạn UTF-8, kích thước, depth và số references. Chấp nhận OpenAPI 3.0.x/3.1.x và internal JSON Pointer. Đã sửa lỗi kiểm tra URI fragment làm từ chối pointer hợp lệ. `dotnet restore --locked-mode` và `dotnet test -c Release --no-restore` qua 37 tests, gồm 32 ca loader. |

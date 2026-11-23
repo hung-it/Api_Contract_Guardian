@@ -14,7 +14,7 @@ Xem [kết quả kiểm chứng tuần 1](../docs/week-1-verification.md).
 
 ## Tuần 2 — Từ hai spec đến findings
 
-- [ ] **T06 · Sau T02–T04 · Validate input.** Đọc YAML/JSON, kiểm tra dialect cho phép, giới hạn input và chỉ cho internal fragment references trong tài liệu. YAML/JSON hợp lệ được chấp nhận. Malformed, unsupported, missing path và external ref trả chẩn đoán phù hợp.
+- [x] **T06 · Sau T02–T04 · Validate input.** Đọc YAML/JSON, kiểm tra dialect cho phép, giới hạn input và chỉ cho internal fragment references trong tài liệu. YAML/JSON hợp lệ được chấp nhận. Malformed, unsupported, missing path và external ref trả chẩn đoán phù hợp.
 - [ ] **T07 · Sau T06 · Gọi engine đã pin.** Dùng subprocess argument list, thu stdout/stderr có giới hạn và timeout. Test với engine hợp lệ, lỗi, hết hạn và output hỏng. Test ở path chứa khoảng trắng trên Windows và trong Linux runner.
 - [ ] **T08 · Sau T07 · Chuẩn hóa findings.** Map rule IDs thật sang Guardian IDs, method/path, schema location và severity. Tính fingerprint từ identity schema ổn định và sort cố định. Test fingerprint ổn định khi mô tả hoặc thứ tự YAML thay đổi. Mapping cho từng rule phải dựa trên output thật của engine.
 - [ ] **T09 · Sau T08 · Chạy golden fixtures đầu tiên.** Có 12–15 cases gồm spec hợp lệ JSON/YAML, unchanged, thêm/xóa endpoint, required request field, request enum thu hẹp, response type/required field, docs-only, internal ref, malformed/unsupported và engine failure. Assert finding/rule/path khi có, thêm CLI process smoke.
