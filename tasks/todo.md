@@ -4,11 +4,11 @@ Xem [roadmap và các quyết định](plan.md). Mỗi mục có kết quả c�
 
 ## Tuần 1 — Chạy thử engine và dựng CLI
 
-- [ ] **T01 · Buổi 1, 2 giờ · Xác nhận môi trường.** Kiểm tra URL `origin`, quyền và GitLab runner/registry. Xác nhận .NET 10 SDK và Docker trên máy dev. Lưu phiên bản, kết quả `dotnet --info`, `docker info` và log job CI tối thiểu.
+- [x] **T01 · Buổi 1, 2 giờ · Xác nhận môi trường.** Kiểm tra URL `origin`, quyền và GitLab runner/registry. Xác nhận .NET 10 SDK và Docker trên máy dev. Lưu phiên bản, kết quả `dotnet --info`, `docker info` và log job CI tối thiểu.
 - [x] **T02 · Buổi 2, 2–3 giờ · Tạo ba contract mẫu.** Thêm `examples/base.yaml`, `compatible.yaml` thêm endpoint và `breaking.yaml` đổi response field string sang integer. Cài engine từ release có checksum. Lưu version/checksum và thử `oasdiff validate`, `oasdiff changelog --format json` cho cả hai cặp. Ghi rule ID và dữ liệu JSON thực.
 - [x] **T03 · Buổi 3, 2–3 giờ · Chốt dialect FlowForge.** Chọn SHA FlowForge sẽ làm baseline. Trên môi trường Python có deps theo lockfile, lấy schema qua `create_app().openapi()`. Kiểm tra version, internal refs và hai lần export giống nhau. Chạy probe no-change và response type change trên bản sao fixture, lưu kết quả và chốt support matrix.
 - [x] **T04 · Buổi 4, 3 giờ · Tạo solution tối thiểu.** Thêm `src/Guardian.Core`, `src/Guardian.Cli`, `tests/Guardian.Core.Tests` và README tiếng Anh. Chạy `dotnet build`, `dotnet test`, `guardian --help` và `guardian version`.
-- [ ] **T05 · Buổi 5, 3 giờ · Kiểm tra checkout sạch trong CI.** Thêm restore/build/test job và ghi cách chạy local. Khi remote đã sẵn sàng, chạy CI và lưu link job của đúng commit.
+- [x] **T05 · Buổi 5, 3 giờ · Kiểm tra checkout sạch trong CI.** Thêm restore/build/test job và ghi cách chạy local. Khi remote đã sẵn sàng, chạy CI và lưu link job của đúng commit.
 
 Xem [kết quả kiểm chứng tuần 1](../docs/week-1-verification.md).
 
