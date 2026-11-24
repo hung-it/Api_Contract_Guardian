@@ -65,6 +65,7 @@ internal static class ReportIngestion
     private static async Task<IResult> Persist(Guid projectId, JsonElement root, string tokenHash, GuardianDb db,
         CancellationToken cancellationToken)
     {
+        var received = DateTimeOffset.UtcNow;
         var analysis = new Analysis
         {
             Id = Guid.NewGuid(),
@@ -72,7 +73,8 @@ internal static class ReportIngestion
             AnalysisKey = AnalysisKey(root),
             Status = root.GetProperty("status").GetString()!,
             Report = root.GetRawText(),
-            CreatedAt = DateTimeOffset.UtcNow,
+            // Match PostgreSQL timestamp precision in the initial receipt and all replays.
+            CreatedAt = received.AddTicks(-(received.Ticks % TimeSpan.TicksPerMicrosecond)),
         };
         foreach (var value in root.GetProperty("findings").EnumerateArray())
         {

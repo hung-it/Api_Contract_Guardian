@@ -35,7 +35,8 @@ public sealed class PublishTests : PostgresApi
         {
             Assert.Single(responses, response => response.StatusCode == HttpStatusCode.Created);
             Assert.Equal(11, responses.Count(response => response.StatusCode == HttpStatusCode.OK));
-            Assert.Single((await Task.WhenAll(responses.Select(Id))).Distinct());
+            var receipts = await Task.WhenAll(responses.Select(response => response.Content.ReadAsStringAsync()));
+            Assert.Single(receipts.Distinct());
             await using var db = Database();
             Assert.Equal(1, await db.Analyses.CountAsync());
             Assert.Equal(1, await db.Findings.CountAsync());

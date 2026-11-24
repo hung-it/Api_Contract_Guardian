@@ -43,7 +43,8 @@ publish > "$out/retried.json"
 pwsh -NoProfile -Command '
     $created = Get-Content artifacts/publish-acceptance/created.json -Raw | ConvertFrom-Json
     $retry = Get-Content artifacts/publish-acceptance/retried.json -Raw | ConvertFrom-Json
-    if (-not $created.analysis_id -or $created.analysis_id -ne $retry.analysis_id -or $created.status -ne "FAIL") { exit 1 }
+    if (-not $created.analysis_id -or $created.analysis_id -ne $retry.analysis_id -or
+        $created.created_at -ne $retry.created_at -or $created.status -ne "FAIL" -or $retry.status -ne "FAIL") { exit 1 }
 '
 test "$(psql -Atq -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM analyses WHERE status = 'FAIL'")" -eq 1
 test "$(psql -Atq -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM analyses")" -eq 1
