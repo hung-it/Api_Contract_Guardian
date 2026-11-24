@@ -51,13 +51,13 @@ Xem [kết quả kiểm chứng tuần 1](../docs/week-1-verification.md).
 
 - [x] **T21 · Sau T11 và T20 · Ghi một report vào PostgreSQL.** Thêm ASP.NET Core API, EF Core/Npgsql và migration tối thiểu cho project, token, analysis, findings. Tạo `POST /api/v1/projects/{id}/ci-reports`, validate report v1, lưu decision/provenance do CLI cung cấp. Smoke từ DB sạch và từ report thật của T20.
 - [x] **T22 · Sau T21 · Scoped token và publish idempotent.** Lưu token hash, giới hạn project/scope. Định danh logical analysis theo project và CI/source identity với các hash, version liên quan. Giữ trường bất định ngoài phép so payload của retry. Test concurrent duplicate tạo đúng một record, payload xung đột trả 409 và token ngoài scope bị từ chối.
-- [ ] **T23 · Sau T22 · Publish từ artifact.** Thêm `guardian publish` và job publish độc lập dùng credentials phù hợp ở luồng trusted. Test API unavailable, retry hợp lệ và publish report FAIL. Kiểm tra job gate vẫn giữ verdict và artifacts.
+- [x] **T23 · Sau T22 · Publish từ artifact.** Thêm `guardian publish` và job publish độc lập dùng credentials phù hợp ở luồng trusted. Test API unavailable, retry hợp lệ và publish report FAIL. Kiểm tra job gate vẫn giữ verdict và artifacts.
 
 ## Tuần 7 — Reviewer tra cứu report
 
 - [x] **T24 · Sau T21–T22 · History và detail API.** Có danh sách theo project, phân trang cơ bản, detail/finding query, xác thực và membership. Integration tests xác nhận đọc đúng report, chặn đọc chéo project và áp dụng index với truy vấn chính.
 - [x] **T25 · Sau T24 · React viewer.** Danh sách analyses → detail → lọc severity/rule → xem diff và provenance. Kiểm thử trên browser với report từ T20, gồm loading, empty và unauthorized.
-- [ ] **T26 · Sau T22 và T25 · Audit và vận hành local.** Token revoke, audit event tối thiểu, health endpoint và Compose cho API/DB/web. Chạy từ clean DB, publish mẫu, truy cập viewer và kiểm thử token sau revoke. Chuyển exception approvals sang backlog sau release nếu lịch đang chật.
+- [x] **T26 · Sau T22 và T25 · Audit và vận hành local.** Token revoke, audit event tối thiểu, health endpoint và Compose cho API/DB/web. Chạy từ clean DB, publish mẫu, truy cập viewer và kiểm thử token sau revoke. Chuyển exception approvals sang backlog sau release nếu lịch đang chật.
 
 ## Tuần 8–9 — Release và portfolio
 
