@@ -42,8 +42,8 @@ Xem [kết quả kiểm chứng tuần 1](../docs/week-1-verification.md).
 ## Tuần 5 — FlowForge thật
 
 - [x] **T18 · Sau T03 và T17 · Export OpenAPI từ source.** Trong nhánh tích hợp FlowForge riêng, tạo script export JSON ổn định và job kiểm tra file OpenAPI commit khớp output mới. Xác nhận hai lần export cùng SHA giống nhau và job phát hiện contract stale khi response model đổi.
-- [ ] **T19 · Sau T18 · Bootstrap baseline.** Chạy một lần đưa spec và policy chuẩn vào protected target theo quy trình review. Giữ thiếu baseline là lỗi sau bootstrap. Ghi SHA chứa baseline, policy hash và digest của Guardian.
-- [ ] **T20 · Sau T19 · Chạy flow MR lỗi rồi sửa.** Candidate sinh từ source thật. Trong nhánh demo, đổi `run_id` trong response model của `GET /api/v1/runs/{run_id}` từ UUID thành integer. Nếu dùng `RunAccepted` để thực hiện thay đổi, lưu ý các endpoint dùng model này và model kế thừa cũng sẽ đổi contract. Kiểm chứng CLI báo đúng field và job FAIL. Commit sửa về tương thích cho PASS. Với mirror GitHub → GitLab, đối chiếu full SHA của source với pipeline. Lưu link MR, pipeline và cả hai report.
+- [x] **T19 · Sau T18 · Bootstrap baseline.** Chạy một lần đưa spec và policy chuẩn vào protected target theo quy trình review. Giữ thiếu baseline là lỗi sau bootstrap. Ghi SHA chứa baseline, policy hash và digest của Guardian.
+- [x] **T20 · Sau T19 · Chạy flow MR lỗi rồi sửa.** Candidate sinh từ source thật. Trong nhánh demo, đổi `run_id` trong response model của `GET /api/v1/runs/{run_id}` từ UUID thành integer. Nếu dùng `RunAccepted` để thực hiện thay đổi, lưu ý các endpoint dùng model này và model kế thừa cũng sẽ đổi contract. Kiểm chứng CLI báo đúng field và job FAIL. Commit sửa về tương thích cho PASS. Với mirror GitHub → GitLab, đối chiếu full SHA của source với pipeline. Lưu link MR, pipeline và cả hai report.
 
 **Checkpoint** có bằng chứng kỹ thuật cho CV từ FlowForge, gồm cùng workflow CI và report có provenance.
 
