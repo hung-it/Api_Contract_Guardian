@@ -59,12 +59,14 @@ publish_cli:
 api_contract_guard:
   stage: check
   image:
-    name: registry.gitlab.com/hung-it/api_contract_guardian/guardian-cli@sha256:f134c35b8d890a09a3fd8069f388f3e9b5ce3e0f736076134fcf82c55f31da37
+    name: registry.gitlab.com/hung-it/api_contract_guardian/guardian-cli@sha256:30d3f9ac53c5a2326e0b4aca3fee046ca708033a0e8a8f74026967af6a9a691d
     entrypoint: [""]
+  variables:
+    GIT_STRATEGY: clone
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_EVENT_TYPE == "detached" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID == $CI_PROJECT_ID && ($CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "demo/week3-missing-baseline")'
   script:
-    - sh scripts/check-merge-request.sh
+    - sh /app/check-merge-request.sh
   artifacts:
     when: always
     paths: [reports/]
