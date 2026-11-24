@@ -3,6 +3,8 @@
 !Directory.Build.props
 !src/
 !src/**
+!schemas/
+!schemas/report-v1.schema.json
 !scripts/
 !scripts/install-oasdiff.ps1
 !scripts/check-merge-request.sh

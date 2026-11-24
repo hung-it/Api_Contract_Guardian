@@ -1,5 +1,17 @@
 stages: [check, package]
 
+.api_postgres:
+  image: mcr.microsoft.com/dotnet/sdk:10.0.201-noble
+  services:
+    - name: postgres:17-bookworm@sha256:1eff563f6c868b9b433566e9f3cf6e5c79fbd3b95bf70ec7277d376cdbfc50d7
+      alias: postgres
+  variables:
+    GIT_STRATEGY: clone
+    FF_NETWORK_PER_BUILD: "true"
+    POSTGRES_DB: guardian_ci
+    POSTGRES_USER: guardian_ci
+    POSTGRES_PASSWORD: guardian-ci-disposable
+
 workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -32,6 +44,52 @@ verify:
       - artifacts/contract-tests/results/
       - artifacts/policy-tests/*/report.json
       - artifacts/policy-tests/*/report.md
+
+api_integration:
+  extends: .api_postgres
+  stage: check
+  rules:
+    - exists:
+        - tests/Guardian.Api.IntegrationTests/Guardian.Api.IntegrationTests.csproj
+  script:
+    - export "GUARDIAN_TEST_POSTGRES=Host=postgres;Database=$POSTGRES_DB;Username=$POSTGRES_USER;Password=$POSTGRES_PASSWORD"
+    - dotnet restore tests/Guardian.Api.IntegrationTests --locked-mode
+    - dotnet test tests/Guardian.Api.IntegrationTests -c Release --no-restore --logger trx --results-directory artifacts/api-tests
+  artifacts:
+    when: always
+    paths: [artifacts/api-tests/]
+
+publish_reports:
+  extends: .api_postgres
+  stage: package
+  needs:
+    - job: verify
+      artifacts: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_REF_PROTECTED == "true"'
+      exists:
+        - scripts/verify-publish.sh
+  script:
+    - apt-get update -qq
+    - apt-get install -y --no-install-recommends postgresql-client
+    - dotnet restore src/Guardian.Api --locked-mode
+    - dotnet build src/Guardian.Api -c Release --no-restore -warnaserror
+    - PGHOST=postgres PGDATABASE="$POSTGRES_DB" PGUSER="$POSTGRES_USER" PGPASSWORD="$POSTGRES_PASSWORD" sh scripts/verify-publish.sh
+  artifacts:
+    when: always
+    paths: [artifacts/publish-acceptance/]
+
+web_check:
+  stage: check
+  image: node:24.11.0-alpine
+  rules:
+    - exists: [web/package-lock.json]
+  script:
+    - cd web
+    - npm ci
+    - npm run lint
+    - npm run typecheck
+    - npm run build
 
 publish_cli:
   stage: package

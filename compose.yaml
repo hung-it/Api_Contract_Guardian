@@ -1,0 +1,56 @@
+name: guardian-local
+
+x-database-settings: &database-settings
+  ConnectionStrings__Guardian: "Host=db;Database=guardian;Username=guardian;Password=${GUARDIAN_PG_PASSWORD:?Set GUARDIAN_PG_PASSWORD};Timeout=3;Command Timeout=5"
+
+services:
+  db:
+    image: postgres:17-bookworm@sha256:1eff563f6c868b9b433566e9f3cf6e5c79fbd3b95bf70ec7277d376cdbfc50d7
+    environment:
+      POSTGRES_USER: guardian
+      POSTGRES_DB: guardian
+      POSTGRES_PASSWORD: "${GUARDIAN_PG_PASSWORD:?Set GUARDIAN_PG_PASSWORD}"
+    volumes: [data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "guardian", "-d", "guardian"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  api:
+    image: guardian-api:local
+    build:
+      context: .
+      dockerfile: src/Guardian.Api/Dockerfile
+    environment:
+      <<: *database-settings
+      Guardian__AllowHttpLoopback: "true"
+      Guardian__DataProtectionKeys: /keys
+    volumes: [session_keys:/keys]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    image: guardian-api:local
+    pull_policy: never
+    command: ["sh", "-ec", "dotnet Guardian.Api.dll migrate && dotnet Guardian.Api.dll bootstrap"]
+    environment:
+      <<: *database-settings
+      Guardian__ProjectId: 6bc296f9-06f9-468c-9b77-e605ca9103a1
+      Guardian__ProjectName: FlowForge
+      Guardian__ReviewerEmail: "${GUARDIAN_DEMO_EMAIL:-reviewer@example.invalid}"
+      Guardian__ReviewerPassword: "${GUARDIAN_DEMO_PASSWORD:?Set GUARDIAN_DEMO_PASSWORD}"
+      Guardian__BootstrapToken: "${GUARDIAN_REPORT_TOKEN:?Set GUARDIAN_REPORT_TOKEN}"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: ./web
+    ports: ["127.0.0.1:${GUARDIAN_WEB_PORT:-5186}:80"]
+    depends_on: [api]
+
+volumes:
+  data:
+  session_keys:

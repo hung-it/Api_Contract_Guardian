@@ -1,0 +1,82 @@
+:root {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: #182d3c;
+  background: #eef3f6;
+  font-synthesis: none;
+  line-height: 1.55;
+  --navy: #172839;
+  --teal: #086454;
+  --border: #d4dfe7;
+  --muted: #4e6372;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+.masthead {
+  display: flex; align-items: center; gap: .8rem;
+  background: var(--navy); color: white; padding: .8rem clamp(1rem, 4vw, 4rem);
+  font-weight: 650; border-bottom: 3px solid #68c1ae;
+}
+.mark {
+  width: 34px; height: 34px; display: grid; place-items: center;
+  border: 1px solid #74b3ad; border-radius: 8px; color: #bff3e3;
+}
+.sign-out { margin-left: auto; background: transparent; color: white; border-color: #678094; }
+main { max-width: 1340px; margin: 0 auto; padding: clamp(1rem, 4vw, 3rem); }
+h1, h2, p { margin: 0; }
+h1 { font-size: clamp(1.65rem, 3vw, 2.45rem); letter-spacing: -.035em; line-height: 1.2; margin: .55rem 0 1.2rem; }
+h2 { font-size: 1.12rem; margin: 0 0 1rem; }
+p, small { color: var(--muted); }
+button, input, select { font: inherit; border-radius: 6px; }
+button { cursor: pointer; padding: .45rem .8rem; border: 1px solid var(--border); color: var(--navy); background: #fff; }
+button:hover { border-color: var(--teal); }
+button:disabled { opacity: .65; cursor: wait; }
+:focus-visible { outline: 3px solid #277e9e; outline-offset: 3px; }
+input, select { min-height: 2.45rem; border: 1px solid #adbdc9; padding: .45rem .6rem; background: #fff; color: var(--navy); min-width: 0; }
+label { display: grid; gap: .35rem; font-weight: 600; font-size: .88rem; }
+.card { background: #fff; border: 1px solid var(--border); border-radius: 10px; }
+.login { min-height: 60vh; display: grid; place-items: center; }
+.login-card { display: grid; gap: 1rem; padding: clamp(1.25rem, 4vw, 2.25rem); width: min(100%, 25rem); }
+.login-card h1 { margin: 0; }
+.primary { background: var(--teal); color: white; border-color: var(--teal); }
+.error { color: #921e39; }
+.toolbar, .actions, .detail-title { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.toolbar { margin-bottom: 1.4rem; align-items: end; }
+.toolbar select { min-width: min(18rem, 68vw); }
+.project-role { color: var(--muted); font-size: .85rem; padding: .55rem 0; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: .8rem 1.15rem; border-bottom: 1px solid var(--border); }
+th { font-size: .8rem; background: #f5f8fa; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+.verdict {
+  display: inline-block; font-size: .76rem; font-weight: 750; letter-spacing: .035em;
+  padding: .22rem .55rem; border-radius: 5px; background: #fcf0d3; color: #755219;
+}
+.pass { background: #dff2e9; color: #105643; }
+.fail { background: #fae5e9; color: #891f3d; }
+.mono, code { font-family: "Cascadia Mono", Consolas, monospace; overflow-wrap: anywhere; }
+.link { padding-left: 0; border: 0; background: transparent; color: var(--teal); text-decoration: underline; }
+.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .7rem; margin: .3rem 0 1rem; }
+.summary .card { padding: .65rem .85rem; }
+dt { color: var(--muted); font-size: .8rem; font-weight: 650; text-transform: capitalize; }
+dd { margin: 0; }
+.summary dd { font-size: 1.45rem; font-weight: 700; }
+.detail-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.findings, .provenance, .empty, .notice, .diagnostics { padding: 1.1rem; }
+.provenance dl { margin: 0; }
+.provenance dl div + div { border-top: 1px solid var(--border); padding-top: .45rem; margin-top: .45rem; }
+.provenance dd { font-size: .81rem; }
+.filters { display: flex; align-items: end; gap: .6rem; flex-wrap: wrap; margin-bottom: .85rem; }
+.filters input { width: min(13rem, 100%); }
+.finding-list { list-style: none; padding: 0; margin: 0; }
+.finding-list li { border-top: 1px solid var(--border); padding: .85rem 0; }
+.finding-list code { display: block; color: var(--teal); margin: .15rem 0; }
+.rule { overflow-wrap: anywhere; }
+.actions, .diagnostics { margin-top: .85rem; }
+@media (max-width: 780px) {
+  .detail-grid { grid-template-columns: 1fr; }
+  th, td { padding: .65rem .55rem; }
+}
+@media (max-width: 420px) {
+  .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

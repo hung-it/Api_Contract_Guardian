@@ -55,7 +55,8 @@ internal static class ReportIngestion
         {
             return Results.Problem(statusCode: 413, title: "Report exceeds 10 MiB.");
         }
-        catch (DbUpdateException error) when (error.InnerException is PostgresException { SqlState: "22P05" or "22003" })
+        catch (DbUpdateException error) when (error.InnerException is PostgresException
+        { SqlState: "22P05" or "22003" or PostgresErrorCodes.ProgramLimitExceeded })
         {
             return Results.Problem(statusCode: 422, title: "Report contains values unsupported by PostgreSQL.");
         }
@@ -66,15 +67,21 @@ internal static class ReportIngestion
     {
         var analysis = new Analysis
         {
-            Id = Guid.NewGuid(), ProjectId = projectId, AnalysisKey = AnalysisKey(root),
-            Status = root.GetProperty("status").GetString()!, Report = root.GetRawText(), CreatedAt = DateTimeOffset.UtcNow,
+            Id = Guid.NewGuid(),
+            ProjectId = projectId,
+            AnalysisKey = AnalysisKey(root),
+            Status = root.GetProperty("status").GetString()!,
+            Report = root.GetRawText(),
+            CreatedAt = DateTimeOffset.UtcNow,
         };
         foreach (var value in root.GetProperty("findings").EnumerateArray())
         {
             analysis.Findings.Add(new()
             {
-                Ordinal = analysis.Findings.Count, RuleId = value.GetProperty("rule_id").GetString()!,
-                Severity = value.GetProperty("severity").GetString()!, Detail = value.GetRawText(),
+                Ordinal = analysis.Findings.Count,
+                RuleId = value.GetProperty("rule_id").GetString()!,
+                Severity = value.GetProperty("severity").GetString()!,
+                Detail = value.GetRawText(),
             });
         }
 
@@ -82,11 +89,13 @@ internal static class ReportIngestion
         var tokens = await db.Tokens.FromSqlInterpolated(
             $"SELECT * FROM integration_tokens WHERE token_hash = {tokenHash} FOR SHARE")
             .AsNoTracking().ToListAsync(cancellationToken);
-        if (Authorize(tokens.SingleOrDefault(), projectId) is { } denied)
+        var token = tokens.SingleOrDefault();
+        if (Authorize(token, projectId) is { } denied)
         {
             return denied;
         }
         db.Analyses.Add(analysis);
+        TokenEndpoints.Audit(db, projectId, token!.Id, "integration_token", "analysis.published", analysis.Id);
         try
         {
             await db.SaveChangesAsync(cancellationToken);
@@ -94,7 +103,7 @@ internal static class ReportIngestion
             return Results.Created($"/api/v1/analyses/{analysis.Id}", Response(analysis));
         }
         catch (DbUpdateException error) when (error.InnerException is PostgresException
-            { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "ux_analyses_project_key" })
+        { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "ux_analyses_project_key" })
         {
             await transaction.RollbackAsync(cancellationToken);
             db.ChangeTracker.Clear();

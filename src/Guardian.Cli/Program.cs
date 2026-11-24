@@ -9,11 +9,13 @@ if (args.Length == 0 || args is ["--help"])
         Usage: guardian --help | version
                guardian validate <spec> [--input-root <dir>]
                guardian compare --base <spec> --candidate <spec> [--policy <file>] [--input-root <dir>] [--out <dir>]
+               guardian publish --report <file> --api-url <url> --project <uuid>
 
         Commands:
           version  Print the Guardian version.
           validate Check a local OpenAPI spec.
           compare  Analyze compatibility between two local OpenAPI specs.
+          publish  Send a report to a Guardian API using GUARDIAN_REPORT_TOKEN.
         """);
     return (int)GateExitCode.Success;
 }
@@ -25,6 +27,11 @@ if (args is ["version"])
 {
     Console.WriteLine(version);
     return (int)GateExitCode.Success;
+}
+
+if (args[0] == "publish")
+{
+    return await ReportPublisher.RunAsync(args[1..]);
 }
 
 var (basePath, candidatePath, policyPath, outputDirectory, inputRoot) = GetPaths(args);

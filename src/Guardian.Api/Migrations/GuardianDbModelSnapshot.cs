@@ -58,7 +58,51 @@ namespace Guardian.Api.Migrations
                         .IsUnique()
                         .HasDatabaseName("ux_analyses_project_key");
 
+                    b.HasIndex("ProjectId", "CreatedAt", "Id")
+                        .IsDescending(false, true, true);
+
                     b.ToTable("analyses", (string)null);
+                });
+
+            modelBuilder.Entity("Guardian.Api.AuditEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("action");
+
+                    b.Property<Guid?>("ActorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_id");
+
+                    b.Property<string>("ActorKind")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("actor_kind");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("EntityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("entity_id");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "CreatedAt", "Id")
+                        .IsDescending(false, true, true);
+
+                    b.ToTable("audit_events", (string)null);
                 });
 
             modelBuilder.Entity("Guardian.Api.Finding", b =>
@@ -87,6 +131,10 @@ namespace Guardian.Api.Migrations
                         .HasColumnName("severity");
 
                     b.HasKey("AnalysisId", "Ordinal");
+
+                    b.HasIndex("AnalysisId", "RuleId", "Ordinal");
+
+                    b.HasIndex("AnalysisId", "Severity", "Ordinal");
 
                     b.ToTable("findings", (string)null);
                 });
@@ -147,7 +195,62 @@ namespace Guardian.Api.Migrations
                     b.ToTable("projects", (string)null);
                 });
 
+            modelBuilder.Entity("Guardian.Api.ProjectMember", b =>
+                {
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("integer")
+                        .HasColumnName("role");
+
+                    b.HasKey("ProjectId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("project_members", (string)null);
+                });
+
+            modelBuilder.Entity("Guardian.Api.Reviewer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("email");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("password_hash");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("reviewers", (string)null);
+                });
+
             modelBuilder.Entity("Guardian.Api.Analysis", b =>
+                {
+                    b.HasOne("Guardian.Api.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Guardian.Api.AuditEvent", b =>
                 {
                     b.HasOne("Guardian.Api.Project", null)
                         .WithMany()
@@ -170,6 +273,21 @@ namespace Guardian.Api.Migrations
                     b.HasOne("Guardian.Api.Project", null)
                         .WithMany()
                         .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Guardian.Api.ProjectMember", b =>
+                {
+                    b.HasOne("Guardian.Api.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Guardian.Api.Reviewer", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

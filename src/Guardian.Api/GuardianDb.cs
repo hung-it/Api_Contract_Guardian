@@ -9,6 +9,9 @@ public sealed class GuardianDb(DbContextOptions<GuardianDb> options) : DbContext
     public DbSet<IntegrationToken> Tokens => Set<IntegrationToken>();
     public DbSet<Analysis> Analyses => Set<Analysis>();
     public DbSet<Finding> Findings => Set<Finding>();
+    public DbSet<Reviewer> Reviewers => Set<Reviewer>();
+    public DbSet<ProjectMember> Members => Set<ProjectMember>();
+    public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -20,11 +23,23 @@ public sealed class GuardianDb(DbContextOptions<GuardianDb> options) : DbContext
             .HasForeignKey(analysis => analysis.ProjectId);
         model.Entity<Analysis>().HasIndex(analysis => new { analysis.ProjectId, analysis.AnalysisKey })
             .IsUnique().HasDatabaseName("ux_analyses_project_key");
+        model.Entity<Analysis>().HasIndex(analysis => new { analysis.ProjectId, analysis.CreatedAt, analysis.Id })
+            .IsDescending(false, true, true);
         model.Entity<Analysis>().Property(analysis => analysis.Report).HasColumnType("jsonb");
         model.Entity<Finding>().ToTable("findings").HasOne<Analysis>().WithMany(analysis => analysis.Findings)
             .HasForeignKey(finding => finding.AnalysisId);
         model.Entity<Finding>().HasKey(finding => new { finding.AnalysisId, finding.Ordinal });
         model.Entity<Finding>().Property(finding => finding.Detail).HasColumnType("jsonb");
+        model.Entity<Finding>().HasIndex(finding => new { finding.AnalysisId, finding.Severity, finding.Ordinal });
+        model.Entity<Finding>().HasIndex(finding => new { finding.AnalysisId, finding.RuleId, finding.Ordinal });
+        model.Entity<Reviewer>().ToTable("reviewers").HasIndex(reviewer => reviewer.Email).IsUnique();
+        model.Entity<ProjectMember>().ToTable("project_members").HasKey(member => new { member.ProjectId, member.UserId });
+        model.Entity<ProjectMember>().HasOne<Project>().WithMany().HasForeignKey(member => member.ProjectId);
+        model.Entity<ProjectMember>().HasOne<Reviewer>().WithMany().HasForeignKey(member => member.UserId);
+        model.Entity<AuditEvent>().ToTable("audit_events").HasOne<Project>().WithMany()
+            .HasForeignKey(audit => audit.ProjectId);
+        model.Entity<AuditEvent>().HasIndex(audit => new { audit.ProjectId, audit.CreatedAt, audit.Id })
+            .IsDescending(false, true, true);
 
         foreach (var type in model.Model.GetEntityTypes())
         {
@@ -34,6 +49,38 @@ public sealed class GuardianDb(DbContextOptions<GuardianDb> options) : DbContext
             }
         }
     }
+}
+
+public sealed class Reviewer
+{
+    public Guid Id { get; set; }
+    public required string Email { get; set; }
+    public required string PasswordHash { get; set; }
+}
+
+public sealed class ProjectMember
+{
+    public Guid ProjectId { get; set; }
+    public Guid UserId { get; set; }
+    public ProjectRole Role { get; set; }
+}
+
+public enum ProjectRole
+{
+    Viewer,
+    Developer,
+    Maintainer,
+}
+
+public sealed class AuditEvent
+{
+    public Guid Id { get; set; }
+    public Guid ProjectId { get; set; }
+    public Guid? ActorId { get; set; }
+    public required string ActorKind { get; set; }
+    public required string Action { get; set; }
+    public Guid EntityId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
 }
 
 public sealed class Project

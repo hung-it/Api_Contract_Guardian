@@ -1,6 +1,6 @@
 # API Contract Guardian
 
-API Contract Guardian is a .NET CLI that validates local OpenAPI documents and detects backward compatibility changes with a pinned diff engine.
+API Contract Guardian validates local OpenAPI documents and detects backward compatibility changes with a pinned diff engine. A .NET API stores versioned CI reports in PostgreSQL for review in a browser.
 
 ## Quick start
 
@@ -51,8 +51,39 @@ Compare writes one JSON object to stdout with the engine version and sorted find
 | `3` | Invalid or unsupported spec |
 | `4` | Diff engine or internal error |
 | `5` | Invalid or missing explicit policy |
+| `6` | Report publication failed |
 
 The help and version commands use codes `0` and `1`. With `--out`, validation, engine and policy failures produce an `INDETERMINATE` report with a diagnostic.
+
+## Local report viewer
+
+Install Docker with Compose v2. Copy `.env.example` to `.env` and set the three secrets. Use a database password, a reviewer password of at least 12 characters, and a randomly generated report token of 64 hex characters. Compose restricts the viewer to loopback and stores PostgreSQL data and session keys in named volumes.
+
+```powershell
+docker compose build api web
+docker compose up -d
+curl.exe --fail http://127.0.0.1:5186/health/ready
+```
+
+The migration service initializes a FlowForge project and its first maintainer. Open `http://127.0.0.1:5186` and sign in with `reviewer@example.invalid` and the password from `.env`. The viewer lists reports in project history and displays findings and provenance. You can seed both reports from the FlowForge GitLab demonstration after publishing the local CLI in Quick start.
+
+```powershell
+$env:GUARDIAN_REPORT_TOKEN = (Get-Content .env | ConvertFrom-StringData).GUARDIAN_REPORT_TOKEN
+$project = '6bc296f9-06f9-468c-9b77-e605ca9103a1'
+foreach ($outcome in 'breaking', 'compatible') {
+    dotnet artifacts/guardian/guardian.dll publish `
+        --report "tests/Guardian.Api.IntegrationTests/Fixtures/flowforge-$outcome.json" `
+        --api-url http://127.0.0.1:5186 --project $project
+    if ($LASTEXITCODE -ne 0) { break }
+}
+Remove-Item Env:GUARDIAN_REPORT_TOKEN
+```
+
+`publish` accepts JSON report v1 up to 10 MiB. It uses HTTPS or a loopback HTTP URL and reads the write token from the environment. On success it prints the analysis ID and verdict and exits `0`, including when the stored verdict is `FAIL`. An exact replay returns the same analysis ID. An incompatible payload for the same analysis key returns HTTP `409`. The bootstrap token expires after one day.
+
+Maintainers can list, create and revoke write tokens through `GET` and `POST /api/v1/projects/{projectId}/tokens` and `DELETE /api/v1/projects/{projectId}/tokens/{tokenId}`. Creation accepts `{"expires_in_days": 1}` with a range of 1–30 days and returns the secret once. Mutations require the reviewer session cookie and the `X-CSRF-TOKEN` header obtained from `GET /api/v1/auth/csrf`. `GET /api/v1/projects/{projectId}/audit-events` returns up to 100 recent events. The session, project membership and audit controls are covered by the PostgreSQL integration suite.
+
+To run the database tests, set `GUARDIAN_TEST_POSTGRES` to a disposable PostgreSQL 17 connection with permission to create databases, then run `dotnet test tests/Guardian.Api.IntegrationTests -c Release`. For browser checks, seed both demo reports, export `GUARDIAN_DEMO_PASSWORD` from `.env`, then run `npm ci`, `npx playwright install chromium` and `npm run test:e2e` from `web`.
 
 ## FlowForge contract probe
 
@@ -65,5 +96,7 @@ The script exports OpenAPI twice, checks that the bytes match and that each refe
 [GitHub](https://github.com/hung-it/Api_Contract_Guardian) is the source repository. Push the same verification commit to [GitLab](https://gitlab.com/hung-it/api_contract_guardian), then confirm that the pipeline ran on the same full SHA. The `verify` job uses a fresh Linux checkout and publishes the CLI, xUnit results, engine probes and Guardian comparison results as artifacts.
 
 The protected `main` branch publishes the Linux AMD64 CLI image on changes to the build inputs. The detached merge-request demo runs `api_contract_guard` using a registry digest. The job reads the baseline and policy from one fetched commit of its protected target and reads the candidate from the pipeline commit. Open both reports in the job's `reports/` artifact to inspect the verdict, source commits and input hashes.
+
+On protected `main` pushes, `publish_reports` starts a temporary API and PostgreSQL service for the job. It takes a `FAIL` report from the `verify` artifacts, checks exit `6` during API unavailability, then publishes twice and verifies a single stored analysis. The original gate retains its own verdict and artifacts.
 
 GitLab requires a successful pipeline for merge. The project-level CI/CD configuration points to a reviewed GitHub commit. The gate runs the script bundled in the pinned image and loads the baseline and policy from the protected target. Update the project setting to the new reviewed full SHA when releasing a CI configuration change. The [threat model](docs/threat-model.md) describes what this setup covers.

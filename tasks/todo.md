@@ -55,8 +55,8 @@ Xem [kết quả kiểm chứng tuần 1](../docs/week-1-verification.md).
 
 ## Tuần 7 — Reviewer tra cứu report
 
-- [ ] **T24 · Sau T21–T22 · History và detail API.** Có danh sách theo project, phân trang cơ bản, detail/finding query, xác thực và membership. Integration tests xác nhận đọc đúng report, chặn đọc chéo project và áp dụng index với truy vấn chính.
-- [ ] **T25 · Sau T24 · React viewer.** Danh sách analyses → detail → lọc severity/rule → xem diff và provenance. Kiểm thử trên browser với report từ T20, gồm loading, empty và unauthorized.
+- [x] **T24 · Sau T21–T22 · History và detail API.** Có danh sách theo project, phân trang cơ bản, detail/finding query, xác thực và membership. Integration tests xác nhận đọc đúng report, chặn đọc chéo project và áp dụng index với truy vấn chính.
+- [x] **T25 · Sau T24 · React viewer.** Danh sách analyses → detail → lọc severity/rule → xem diff và provenance. Kiểm thử trên browser với report từ T20, gồm loading, empty và unauthorized.
 - [ ] **T26 · Sau T22 và T25 · Audit và vận hành local.** Token revoke, audit event tối thiểu, health endpoint và Compose cho API/DB/web. Chạy từ clean DB, publish mẫu, truy cập viewer và kiểm thử token sau revoke. Chuyển exception approvals sang backlog sau release nếu lịch đang chật.
 
 ## Tuần 8–9 — Release và portfolio
