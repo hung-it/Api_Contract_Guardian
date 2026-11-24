@@ -1,6 +1,9 @@
 **
 !global.json
 !Directory.Build.props
+!LICENSE
+!licenses/
+!licenses/YamlDotNet.txt
 !src/
 !src/**
 !schemas/

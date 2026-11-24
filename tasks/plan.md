@@ -71,6 +71,12 @@ CV sau khi kiểm chứng integration có thể dùng câu sau:
 
 ## Tiến độ thực hiện
 
+### Kế hoạch triển khai tuần 8–9
+
+- **T27:** Dựng candidate CLI `1.0.0` với giấy phép MIT. Nghiệm thu từ checkout sạch bằng full suite, image Linux offline, API/PostgreSQL tạm và Compose có dữ liệu riêng.
+- **T28:** Đo `guardian compare` ở 10, 100 và 500 operations với 5 lần warmup và 30 mẫu mỗi kích thước. Hoàn thiện Quick Start, support matrix, sơ đồ, OpenAPI và hướng dẫn xử lý lỗi.
+- **T29:** Chuẩn bị video 3–5 phút, changelog, report mẫu, CLI ZIP, checksum và CV bullets. Khi quota GitLab có lại, nghiệm thu trên đúng full SHA rồi mới tạo tag `v1.0.0` và công bố GitHub Release.
+
 ### Kế hoạch triển khai tuần 6–7
 
 - T21–T22: ASP.NET Core, PostgreSQL 17 và report v1. Nghiệm thu migration, scoped token, idempotency và ghi nguyên tử bằng hai báo cáo FlowForge.

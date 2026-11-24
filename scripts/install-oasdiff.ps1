@@ -28,7 +28,7 @@ if ($actual -ne $checksum) {
     throw "oasdiff archive SHA-256 mismatch: $actual"
 }
 
-tar -xzf $ArchivePath -C $Destination $binary
+tar -xzf $ArchivePath -C $Destination $binary LICENSE
 if ($LASTEXITCODE -ne 0) { throw 'Unable to extract the verified oasdiff archive.' }
 
 Write-Host "Verified oasdiff v$version archive ($platform x64): $checksum"

@@ -16,6 +16,9 @@ RUN apt-get update \
     && chmod 0755 /usr/local/bin/guardian
 COPY --from=build /publish/ /app/
 COPY --from=build /engine/oasdiff /usr/local/bin/oasdiff
+COPY --from=build /engine/LICENSE /app/licenses/oasdiff.txt
+COPY LICENSE /app/LICENSE
+COPY licenses/YamlDotNet.txt /app/licenses/YamlDotNet.txt
 COPY scripts/check-merge-request.sh /app/check-merge-request.sh
 ARG GUARDIAN_SOURCE_SHA
 LABEL org.opencontainers.image.revision=$GUARDIAN_SOURCE_SHA

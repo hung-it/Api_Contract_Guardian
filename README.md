@@ -2,6 +2,17 @@
 
 API Contract Guardian validates local OpenAPI documents and detects backward compatibility changes with a pinned diff engine. A .NET API stores versioned CI reports in PostgreSQL for review in a browser.
 
+```mermaid
+flowchart LR
+    A[Protected baseline and policy] --> C[Guardian CLI and pinned oasdiff]
+    B[Candidate OpenAPI] --> C
+    C --> D[Gate exit code and JSON / Markdown artifacts]
+    D --> E[Trusted publication]
+    E --> F[ASP.NET Core report API]
+    F --> G[(PostgreSQL)]
+    H[React reviewer] --> F
+```
+
 ## Quick start
 
 Install the .NET 10.0.201 SDK specified by `global.json`. Run from the repository root.
@@ -23,6 +34,7 @@ Run the CLI smoke tests and OpenAPI probes in PowerShell with `tar` available. T
 $engine = & ./scripts/install-oasdiff.ps1
 & ./scripts/probe-oasdiff.ps1 -Engine $engine
 & ./scripts/verify-contracts.ps1 -Engine $engine
+& ./scripts/verify-policy.ps1 -Engine $engine
 ```
 
 Set `GUARDIAN_OASDIFF_PATH` to the absolute path of the installed engine. Then run Guardian against a spec or a pair of specs.
@@ -37,7 +49,14 @@ Add `--policy .guardian.yml --out artifacts/reports` to write JSON and Markdown 
 
 Both report formats include the verdict, input hashes when available, and engine and Guardian versions. CI provides baseline and candidate commits and its pipeline ID. See the [JSON report schema](schemas/report-v1.schema.json).
 
-The CLI accepts single-file UTF-8 JSON, YAML or YML using OpenAPI 3.0.x or 3.1.x. Compare uses pairs from the same minor version. Input limits are 5 MiB, 64 levels and 2,048 references per file. References use internal JSON Pointers and the default schema dialect. The supported YAML subset uses unique scalar keys and plain YAML without aliases, merge keys or explicit tags. Reusable `components.pathItems` and dynamic schema references are outside the current support matrix.
+### OpenAPI support
+
+| Input | Supported scope |
+|---|---|
+| Versions | OpenAPI 3.0.x and 3.1.x. Compare two specs from the same minor version. |
+| Files | A single UTF-8 JSON or YAML document per spec. Limits are 5 MiB, 64 levels and 2,048 references. |
+| References and dialect | Internal JSON Pointers and the default dialect. External references, dynamic schema references and reusable `components.pathItems` are outside the supported scope. |
+| YAML | Unique scalar keys and plain YAML. Aliases, merge keys and explicit tags are rejected. |
 
 Use `--input-root <dir>` on `validate` or `compare` to confine input files to a trusted local directory. Relative paths are resolved from the current working directory. With confinement enabled, Guardian checks the explicit policy as well as specs and rejects symbolic links and reparse points in the input paths. See the [policy reference](docs/policy-reference.md) and [threat model](docs/threat-model.md).
 
@@ -83,6 +102,8 @@ Remove-Item Env:GUARDIAN_REPORT_TOKEN
 
 Maintainers can list, create and revoke write tokens through `GET` and `POST /api/v1/projects/{projectId}/tokens` and `DELETE /api/v1/projects/{projectId}/tokens/{tokenId}`. Creation accepts `{"expires_in_days": 1}` with a range of 1–30 days and returns the secret once. Mutations require the reviewer session cookie and the `X-CSRF-TOKEN` header obtained from `GET /api/v1/auth/csrf`. `GET /api/v1/projects/{projectId}/audit-events` returns up to 100 recent events. The session, project membership and audit controls are covered by the PostgreSQL integration suite.
 
+See the [Report Store OpenAPI contract](openapi/guardian-http-v1.yaml) for routes, request shapes and authorization.
+
 To run the database tests, set `GUARDIAN_TEST_POSTGRES` to a disposable PostgreSQL 17 connection with permission to create databases, then run `dotnet test tests/Guardian.Api.IntegrationTests -c Release`. For browser checks, seed both demo reports, export `GUARDIAN_DEMO_PASSWORD` from `.env`, then run `npm ci`, `npx playwright install chromium` and `npm run test:e2e` from `web`.
 
 ## FlowForge contract probe
@@ -100,3 +121,28 @@ The protected `main` branch publishes the Linux AMD64 CLI image on changes to th
 On protected `main` pushes, `publish_reports` starts a temporary API and PostgreSQL service for the job. It takes a `FAIL` report from the `verify` artifacts, checks exit `6` during API unavailability, then publishes twice and verifies a single stored analysis. The original gate retains its own verdict and artifacts.
 
 GitLab requires a successful pipeline for merge. The project-level CI/CD configuration points to a reviewed GitHub commit. The gate runs the script bundled in the pinned image and loads the baseline and policy from the protected target. Update the project setting to the new reviewed full SHA when releasing a CI configuration change. The [threat model](docs/threat-model.md) describes what this setup covers.
+
+### Troubleshooting
+
+| Symptom | Check |
+|---|---|
+| `compare` exits `2` | Read `report.md` for the affected operation, effective severity and applied policy. Fix the incompatibility or review an intentional policy change on the protected target. |
+| `compare` exits `3`, `4` or `5` | Check diagnostic codes in `report.json`. Check that both specs exist at the documented SHA, the pinned engine matches its checksum, and the trusted policy parses. |
+| `publish` exits `6` | Check `/health/ready`, the report's schema version, and the token's scope and expiry. Retry an interrupted upload with the same report bytes. For HTTP `409`, compare provenance and content with the original analysis. |
+| Readiness check fails | Inspect `docker compose logs migrate api` and check `/health/ready`. The migration service initializes the project before the API starts. |
+
+## Benchmark
+
+Use Linux AMD64 with the SDK from `global.json`, PowerShell 7 and GNU `time`. Build the CLI with the Quick start commands, then run the checked-in harness from the repository root.
+
+```powershell
+$engine = & ./scripts/install-oasdiff.ps1
+$sha = git rev-parse HEAD
+& ./scripts/benchmark-cli.ps1 -Engine $engine -SourceSha $sha
+```
+
+The harness compares generated pairs of 10, 100 and 500 operations. Each pair contains one response type change. It records process elapsed time through report generation, peak RSS from GNU `time`, input hashes and environment details. Median and nearest-rank p95 use 30 measured runs per workload after five warmups. Results go to `artifacts/benchmark/`. Release evidence and benchmark results are available from [GitHub Releases](https://github.com/hung-it/Api_Contract_Guardian/releases).
+
+## License
+
+Guardian is released under the [MIT License](LICENSE). The CLI distribution carries the [YamlDotNet notice](licenses/YamlDotNet.txt), and the pinned oasdiff distribution retains its upstream license.
