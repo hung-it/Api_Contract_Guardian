@@ -66,4 +66,4 @@ The script exports OpenAPI twice, checks that the bytes match and that each refe
 
 The protected `main` branch publishes the Linux AMD64 CLI image on changes to the build inputs. The detached merge-request demo runs `api_contract_guard` using a registry digest. The job reads the baseline and policy from one fetched commit of its protected target and reads the candidate from the pipeline commit. Open both reports in the job's `reports/` artifact to inspect the verdict, source commits and input hashes.
 
-The trust demonstrated here covers the source of the baseline and policy. Independent enforcement of the job configuration and required merge checks are Week 4 acceptance criteria.
+GitLab requires a successful pipeline for merge. The project-level CI/CD configuration points to a reviewed GitHub commit. The gate runs the script bundled in the pinned image and loads the baseline and policy from the protected target. Update the project setting to the new reviewed full SHA when releasing a CI configuration change. The [threat model](docs/threat-model.md) describes what this setup covers.

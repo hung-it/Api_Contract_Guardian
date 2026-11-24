@@ -32,16 +32,16 @@ Xem [kết quả kiểm chứng tuần 1](../docs/week-1-verification.md).
 
 ## Tuần 4 — Độ tin cậy và trust boundary
 
-- [ ] **T14 · Sau T13 · Kiểm chứng GitLab merge settings.** Với quyền Maintainer, kiểm tra protected target và `Pipelines must succeed`. Xác minh nguồn job được quản lý độc lập nếu môi trường hỗ trợ. Dùng MR test có policy hoặc config thay đổi để xác nhận gate bảo vệ được phần nào. Ghi GitLab tier, runner, merge settings và kết quả thực.
+- [x] **T14 · Sau T13 · Kiểm chứng GitLab merge settings.** Với quyền Maintainer, kiểm tra protected target và `Pipelines must succeed`. Xác minh nguồn job được quản lý độc lập nếu môi trường hỗ trợ. Dùng MR test có policy hoặc config thay đổi để xác nhận gate bảo vệ được phần nào. Ghi GitLab tier, runner, merge settings và kết quả thực.
 - [x] **T15 · Sau T07 · Kiểm tra ranh giới input.** Thêm test offline cho refs bên ngoài, path ngoài workspace, symlink, input lớn/quá sâu, timeout và output vượt giới hạn. Xác nhận engine chỉ nhận file nội bộ đã qua validation và không cần mạng khi compare, trong runner phù hợp.
 - [x] **T16 · Sau T11 và T15 · Khóa regression suite.** Chốt ít nhất 30 golden cases, gồm giới hạn dialect runtime. Lặp cùng input 10 lần để so verdict/findings/fingerprints và hash nội dung ổn định. Đo branch coverage policy core, mục tiêu khoảng 90%. Viết `docs/policy-reference.md` và `docs/threat-model.md`.
-- [ ] **T17 · Sau T14–T16 · Chuẩn bị release candidate P0.** Từ clean checkout chạy Quick Start và bộ fixture trên Linux, xác nhận exit/report và phiên bản của CLI/image/engine.
+- [x] **T17 · Sau T14–T16 · Chuẩn bị release candidate P0.** Từ clean checkout chạy Quick Start và bộ fixture trên Linux, xác nhận exit/report và phiên bản của CLI/image/engine.
 
 **Checkpoint** release candidate CLI tái lập được, rõ khả năng cưỡng chế merge trên GitLab và sẵn sàng dùng ở FlowForge.
 
 ## Tuần 5 — FlowForge thật
 
-- [ ] **T18 · Sau T03 và T17 · Export OpenAPI từ source.** Trong nhánh tích hợp FlowForge riêng, tạo script export JSON ổn định và job kiểm tra file OpenAPI commit khớp output mới. Xác nhận hai lần export cùng SHA giống nhau và job phát hiện contract stale khi response model đổi.
+- [x] **T18 · Sau T03 và T17 · Export OpenAPI từ source.** Trong nhánh tích hợp FlowForge riêng, tạo script export JSON ổn định và job kiểm tra file OpenAPI commit khớp output mới. Xác nhận hai lần export cùng SHA giống nhau và job phát hiện contract stale khi response model đổi.
 - [ ] **T19 · Sau T18 · Bootstrap baseline.** Chạy một lần đưa spec và policy chuẩn vào protected target theo quy trình review. Giữ thiếu baseline là lỗi sau bootstrap. Ghi SHA chứa baseline, policy hash và digest của Guardian.
 - [ ] **T20 · Sau T19 · Chạy flow MR lỗi rồi sửa.** Candidate sinh từ source thật. Trong nhánh demo, đổi `run_id` trong response model của `GET /api/v1/runs/{run_id}` từ UUID thành integer. Nếu dùng `RunAccepted` để thực hiện thay đổi, lưu ý các endpoint dùng model này và model kế thừa cũng sẽ đổi contract. Kiểm chứng CLI báo đúng field và job FAIL. Commit sửa về tương thích cho PASS. Với mirror GitHub → GitLab, đối chiếu full SHA của source với pipeline. Lưu link MR, pipeline và cả hai report.
 
