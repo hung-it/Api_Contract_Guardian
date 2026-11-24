@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Guardian.Api/Guardian.Api.csproj" />
     <Project Path="src/Guardian.Cli/Guardian.Cli.csproj" />
     <Project Path="src/Guardian.Core/Guardian.Core.csproj" />
   </Folder>

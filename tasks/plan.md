@@ -71,6 +71,13 @@ CV sau khi kiểm chứng integration có thể dùng câu sau:
 
 ## Tiến độ thực hiện
 
+### Kế hoạch triển khai tuần 6–7
+
+- T21–T22: ASP.NET Core, PostgreSQL 17 và report v1. Nghiệm thu migration, scoped token, idempotency và ghi nguyên tử bằng hai báo cáo FlowForge.
+- T23: CLI publish và job riêng trên protected main có API/PostgreSQL tạm. Kiểm chứng báo cáo FAIL, retry và gate offline.
+- T24–T25: History, detail, membership theo project và React viewer cùng origin. Kiểm thử bằng report v1 thật.
+- T26: Revoke, audit, health và Compose local với volume dữ liệu riêng. Chạy lại full suite và xác nhận pipeline cùng SHA.
+
 ### Kế hoạch triển khai tuần 4–5
 
 - **T14:** Xác minh branch protection, runner và `Pipelines must succeed` trên GitLab Guardian. Thử cấu hình gate do Maintainer quản lý. Lưu kết quả MR tương thích, breaking và hash policy từ target.
@@ -99,3 +106,5 @@ CV sau khi kiểm chứng integration có thể dùng câu sau:
 | Tuần 5 · T18 | Hoàn thành | FlowForge commit `a6cf1f6` có hai lần export OpenAPI 3.1.0 cùng SHA-256 `fec613871b70272b42711155899c3d9492520665d6dc0234f4ed5773d074cc21`. `openapi_sync` pass trên GitLab. Local đã thử thay response model để xác nhận bản snapshot cũ lệch bản export mới. [Job openapi_sync](https://gitlab.com/hung-it/flow_forge/-/jobs/18308905690) |
 | Tuần 5 · T19 | Hoàn thành | [MR bootstrap](https://gitlab.com/hung-it/flow_forge/-/merge_requests/1) qua toàn bộ pipeline và merge thành `920a1852d50e922363ea05081e68bd7dfdd7a472`. [MR bật gate](https://gitlab.com/hung-it/flow_forge/-/merge_requests/2) pass với hai SHA-256 spec giống nhau, policy lấy từ target và digest RC của T17. Đã đồng bộ protected target `66882debd430960f59ca52fa1452adff1a1df400` trên hai remote. Merge dành cho Maintainers, push trực tiếp là `No one`. Policy SHA-256 `36d6de3b503d28c6a522829f0cceb08d44de1b3ac654ff661f21e0d42adca054`. Test offline cho gate FlowForge thiếu baseline trả `3` và ghi hai report `INDETERMINATE`. |
 | Tuần 5 · T20 | Hoàn thành | [MR demo FlowForge !3](https://gitlab.com/hung-it/flow_forge/-/merge_requests/3) dùng cùng full SHA trên GitHub/GitLab. [Pipeline đỏ](https://gitlab.com/hung-it/flow_forge/-/pipelines/3107066933) tại `71a00a561049f8254da28c3a79e3ac722674877e` qua OpenAPI sync. Gate exit `2` với `response-property-type-changed` ở `GET /api/v1/runs/{run_id}`. Compose smoke bắt thêm 6 lỗi so sánh UUID với integer. [Pipeline xanh](https://gitlab.com/hung-it/flow_forge/-/pipelines/3107071785) tại `fc4fb59e7ca8ea23a8cb9625abd4c67df90b5b3b` khôi phục UUID. Gate exit `0` và cả 6 job pass, gồm Compose smoke. Đã đối chiếu provenance với Git blobs và validate JSON Schema v1. Lưu [artifacts đỏ](https://gitlab.com/hung-it/flow_forge/-/jobs/18309306972/artifacts/browse) và [artifacts xanh](https://gitlab.com/hung-it/flow_forge/-/jobs/18309342138/artifacts/browse), cùng bản sao JSON/Markdown trong `artifacts/week5-gitlab/` để dùng cho T21. |
+| Tuần 6 · T21 | Hoàn thành | Migration trên PostgreSQL 17 sạch. Hai fixture FlowForge tuần 5 giữ verdict, findings và toàn bộ provenance trong JSONB. Build Release 0 cảnh báo. Đã kiểm tra `400/413/422`. |
+| Tuần 6 · T22 | Hoàn thành | Tổng 10 integration tests pass. 12 publish đồng thời tạo một analysis và một finding. Retry JSON khác định dạng trả cùng ID, nội dung xung đột trả `409`. Scope, project, hạn token và rollback đã được kiểm tra trên PostgreSQL thật. |

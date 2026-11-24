@@ -49,8 +49,8 @@ Xem [kết quả kiểm chứng tuần 1](../docs/week-1-verification.md).
 
 ## Tuần 6 — Publish và persistence
 
-- [ ] **T21 · Sau T11 và T20 · Ghi một report vào PostgreSQL.** Thêm ASP.NET Core API, EF Core/Npgsql và migration tối thiểu cho project, token, analysis, findings. Tạo `POST /api/v1/projects/{id}/ci-reports`, validate report v1, lưu decision/provenance do CLI cung cấp. Smoke từ DB sạch và từ report thật của T20.
-- [ ] **T22 · Sau T21 · Scoped token và publish idempotent.** Lưu token hash, giới hạn project/scope. Định danh logical analysis theo project và CI/source identity với các hash, version liên quan. Giữ trường bất định ngoài phép so payload của retry. Test concurrent duplicate tạo đúng một record, payload xung đột trả 409 và token ngoài scope bị từ chối.
+- [x] **T21 · Sau T11 và T20 · Ghi một report vào PostgreSQL.** Thêm ASP.NET Core API, EF Core/Npgsql và migration tối thiểu cho project, token, analysis, findings. Tạo `POST /api/v1/projects/{id}/ci-reports`, validate report v1, lưu decision/provenance do CLI cung cấp. Smoke từ DB sạch và từ report thật của T20.
+- [x] **T22 · Sau T21 · Scoped token và publish idempotent.** Lưu token hash, giới hạn project/scope. Định danh logical analysis theo project và CI/source identity với các hash, version liên quan. Giữ trường bất định ngoài phép so payload của retry. Test concurrent duplicate tạo đúng một record, payload xung đột trả 409 và token ngoài scope bị từ chối.
 - [ ] **T23 · Sau T22 · Publish từ artifact.** Thêm `guardian publish` và job publish độc lập dùng credentials phù hợp ở luồng trusted. Test API unavailable, retry hợp lệ và publish report FAIL. Kiểm tra job gate vẫn giữ verdict và artifacts.
 
 ## Tuần 7 — Reviewer tra cứu report
