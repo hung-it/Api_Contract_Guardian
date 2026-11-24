@@ -26,7 +26,7 @@ Xem [kết quả kiểm chứng tuần 1](../docs/week-1-verification.md).
 - [x] **T10 · Sau T08 · Áp policy v1.** Parse `.guardian.yml` với `version`, `fail_on`, `fail_on_unknown` và rule overrides. Test strict ERR, WARN/INFO, override, invalid schema và unknown/unmapped rule.
 - [x] **T11 · Sau T09–T10 · Xuất report và exit codes.** Hoàn thiện `guardian validate` và `guardian compare`, kiểm chứng exit codes `0/2/3/4/5` và report schema v1. JSON và Markdown chứa cùng verdict. Nêu rõ input lỗi hoặc engine diagnostic nếu chưa có findings. Nâng fixture lên khoảng 25.
 - [x] **T12 · Sau T11 · Đóng gói CLI.** Build image Linux có CLI và engine đã pin. Từ image chạy cặp PASS và FAIL. Lưu executable version, image digest và report.
-- [ ] **T13 · Sau T12 · Chạy detached MR gate cùng project.** Dùng job `api_contract_guard`, lấy baseline và policy cùng target SHA, ghim image digest, lưu artifacts kể cả khi job FAIL. Dùng cặp sample trong repo demo. Lưu link MR compatible, MR breaking và kết quả thiếu baseline.
+- [x] **T13 · Sau T12 · Chạy detached MR gate cùng project.** Dùng job `api_contract_guard`, lấy baseline và policy cùng target SHA, ghim image digest, lưu artifacts kể cả khi job FAIL. Dùng cặp sample trong repo demo. Lưu link MR compatible, MR breaking và kết quả thiếu baseline.
 
 **Checkpoint** GitLab job trả kết quả đúng từ CLI và có artifacts khi Guardian API chưa triển khai.
 
