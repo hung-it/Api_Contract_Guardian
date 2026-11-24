@@ -39,6 +39,8 @@ Both report formats include the verdict, input hashes when available, and engine
 
 The CLI accepts single-file UTF-8 JSON, YAML or YML using OpenAPI 3.0.x or 3.1.x. Compare uses pairs from the same minor version. Input limits are 5 MiB, 64 levels and 2,048 references per file. References use internal JSON Pointers and the default schema dialect. The supported YAML subset uses unique scalar keys and plain YAML without aliases, merge keys or explicit tags. Reusable `components.pathItems` and dynamic schema references are outside the current support matrix.
 
+Use `--input-root <dir>` on `validate` or `compare` to confine input files to a trusted local directory. Relative paths are resolved from the current working directory. With confinement enabled, Guardian checks the explicit policy as well as specs and rejects symbolic links and reparse points in the input paths. See the [policy reference](docs/policy-reference.md) and [threat model](docs/threat-model.md).
+
 Compare writes one JSON object to stdout with the engine version and sorted findings. Findings include the rule, severity, endpoint, source coordinates when available, and a stable fingerprint. The fingerprint excludes the message and source coordinates. Invalid input and engine failures write a diagnostic to stderr.
 
 | Exit code | Meaning |

@@ -43,6 +43,8 @@ $cases = @(
     @{ Name = 'unsupported-policy-version'; Policy = $badVersion; Candidate = $compatible; Code = 5; Status = 'INDETERMINATE'; Diagnostic = 'INVALID_POLICY' }
     @{ Name = 'unknown-rule-override'; Policy = $badRule; Candidate = $compatible; Code = 5; Status = 'INDETERMINATE'; Diagnostic = 'INVALID_POLICY' }
     @{ Name = 'missing-policy'; Policy = "$missing.yml"; Candidate = $compatible; Code = 5; Status = 'INDETERMINATE'; Diagnostic = 'INVALID_POLICY' }
+    @{ Name = 'policy-outside-input-root'; Policy = $strict; Candidate = $compatible; InputRoot = (Join-Path $root 'examples');
+       Code = 5; Status = 'INDETERMINATE'; Diagnostic = 'INVALID_POLICY' }
     @{ Name = 'missing-baseline'; Policy = $strict; Base = "$missing.yaml"; Candidate = $compatible; Code = 3; Status = 'INDETERMINATE'; Diagnostic = 'INVALID_SPEC' }
     @{ Name = 'engine-failure'; Policy = $strict; Candidate = $badOutputCandidate; TestEngine = $true; Code = 4; Status = 'INDETERMINATE'; Diagnostic = 'ENGINE_FAILURE' }
 )
@@ -55,7 +57,8 @@ try {
         $base = if ($case.Base) { $case.Base } else { $baseline }
         $stderr = Join-Path $folder ($case.Name + '.stderr.txt')
         $ErrorActionPreference = 'Continue'
-        $output = & dotnet $cli compare --base $base --candidate $case.Candidate --policy $case.Policy --out $out 2> $stderr
+        $inputArgs = if ($case.InputRoot) { '--input-root', $case.InputRoot }
+        $output = & dotnet $cli compare --base $base --candidate $case.Candidate --policy $case.Policy --out $out @inputArgs 2> $stderr
         $code = $LASTEXITCODE
         $ErrorActionPreference = 'Stop'
         if ($code -ne $case.Code) { throw "$($case.Name): got exit $code. $(Get-Content -Raw $stderr)" }
@@ -81,13 +84,25 @@ try {
         }
         Write-Host "PASS policy $($case.Name)"
     }
-    $strictOut = Join-Path $folder 'strict-err'
     $env:GUARDIAN_OASDIFF_PATH = $enginePath
-    $before = Get-FileHash (Join-Path $strictOut 'report.json'), (Join-Path $strictOut 'report.md')
-    $null = & dotnet $cli compare --base $baseline --candidate $breaking --policy $strict --out $strictOut
-    if ($LASTEXITCODE -ne 2) { throw 'Repeat comparison did not return exit 2.' }
-    $after = Get-FileHash (Join-Path $strictOut 'report.json'), (Join-Path $strictOut 'report.md')
-    if (Compare-Object $before $after -Property Hash, Path) { throw 'Repeated reports differ.' }
+    foreach ($case in @(
+        @{ Status = 'PASS'; Candidate = $compatible; Code = 0 }
+        @{ Status = 'FAIL'; Candidate = $breaking; Code = 2 }
+    )) {
+        $out = Join-Path $folder ('repro-' + $case.Status.ToLowerInvariant())
+        $reports = (Join-Path $out 'report.json'), (Join-Path $out 'report.md')
+        $expected = $null
+        for ($run = 1; $run -le 10; $run++) {
+            $null = & dotnet $cli compare --base $baseline --candidate $case.Candidate --policy $strict --out $out
+            if ($LASTEXITCODE -ne $case.Code) { throw "$($case.Status) run $run returned an unexpected exit code." }
+            $hashes = Get-FileHash -LiteralPath $reports
+            if ($run -eq 1) { $expected = $hashes }
+            elseif (Compare-Object $expected $hashes -Property Hash, Path) {
+                throw "$($case.Status) report hashes changed on run $run."
+            }
+        }
+        Write-Host "PASS 10 reproducible $($case.Status) runs"
+    }
 } finally {
     $env:GUARDIAN_OASDIFF_PATH = $previousEngine
 }

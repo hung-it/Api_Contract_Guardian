@@ -33,8 +33,8 @@ Xem [kết quả kiểm chứng tuần 1](../docs/week-1-verification.md).
 ## Tuần 4 — Độ tin cậy và trust boundary
 
 - [ ] **T14 · Sau T13 · Kiểm chứng GitLab merge settings.** Với quyền Maintainer, kiểm tra protected target và `Pipelines must succeed`. Xác minh nguồn job được quản lý độc lập nếu môi trường hỗ trợ. Dùng MR test có policy hoặc config thay đổi để xác nhận gate bảo vệ được phần nào. Ghi GitLab tier, runner, merge settings và kết quả thực.
-- [ ] **T15 · Sau T07 · Kiểm tra ranh giới input.** Thêm test offline cho refs bên ngoài, path ngoài workspace, symlink, input lớn/quá sâu, timeout và output vượt giới hạn. Xác nhận engine chỉ nhận file nội bộ đã qua validation và không cần mạng khi compare, trong runner phù hợp.
-- [ ] **T16 · Sau T11 và T15 · Khóa regression suite.** Chốt ít nhất 30 golden cases, gồm giới hạn dialect runtime. Lặp cùng input 10 lần để so verdict/findings/fingerprints và hash nội dung ổn định. Đo branch coverage policy core, mục tiêu khoảng 90%. Viết `docs/policy-reference.md` và `docs/threat-model.md`.
+- [x] **T15 · Sau T07 · Kiểm tra ranh giới input.** Thêm test offline cho refs bên ngoài, path ngoài workspace, symlink, input lớn/quá sâu, timeout và output vượt giới hạn. Xác nhận engine chỉ nhận file nội bộ đã qua validation và không cần mạng khi compare, trong runner phù hợp.
+- [x] **T16 · Sau T11 và T15 · Khóa regression suite.** Chốt ít nhất 30 golden cases, gồm giới hạn dialect runtime. Lặp cùng input 10 lần để so verdict/findings/fingerprints và hash nội dung ổn định. Đo branch coverage policy core, mục tiêu khoảng 90%. Viết `docs/policy-reference.md` và `docs/threat-model.md`.
 - [ ] **T17 · Sau T14–T16 · Chuẩn bị release candidate P0.** Từ clean checkout chạy Quick Start và bộ fixture trên Linux, xác nhận exit/report và phiên bản của CLI/image/engine.
 
 **Checkpoint** release candidate CLI tái lập được, rõ khả năng cưỡng chế merge trên GitLab và sẵn sàng dùng ở FlowForge.

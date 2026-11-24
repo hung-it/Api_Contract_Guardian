@@ -18,7 +18,7 @@ internal static class SpecLoader
     private const string DefaultDialect = "https://spec.openapis.org/oas/3.1/dialect/base";
     private static readonly UTF8Encoding Utf8 = new(false, true);
 
-    internal static SpecDocument Load(string path)
+    internal static SpecDocument Load(string path, string? inputRoot = null)
     {
         if (string.IsNullOrWhiteSpace(path) || path.StartsWith("//", StringComparison.Ordinal)
             || path.StartsWith(@"\\", StringComparison.Ordinal)
@@ -36,7 +36,7 @@ internal static class SpecLoader
         byte[] bytes;
         try
         {
-            var fullPath = Path.GetFullPath(path);
+            var fullPath = inputRoot is null ? Path.GetFullPath(path) : InputPath.ResolveUnderRoot(path, inputRoot);
             if (OperatingSystem.IsWindows()
                 && (fullPath.StartsWith(@"\\", StringComparison.Ordinal)
                     || new DriveInfo(Path.GetPathRoot(fullPath)!).DriveType == DriveType.Network))
@@ -62,6 +62,10 @@ internal static class SpecLoader
             {
                 throw new SpecInputException("Spec changed during reading.");
             }
+        }
+        catch (InputPathException error)
+        {
+            throw new SpecInputException(error.Message);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException
             or NotSupportedException)

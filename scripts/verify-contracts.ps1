@@ -53,6 +53,9 @@ $semanticError = Write-Variant 'semantically-invalid' { param($spec)
 }
 $malformedChangelog = Write-Variant 'malformed-changelog' { param($spec) $spec.info.title = 'malformed-changelog' }
 $unmappedChangelog = Write-Variant 'unmapped-changelog' { param($spec) $spec.info.title = 'unmapped-changelog' }
+$externalRef = Write-Variant 'external-reference' { param($spec)
+    $spec.paths.'/tasks'.get.responses.'200'.content.'application/json'.schema.'$ref' = './other.json'
+}
 $malformed = Join-Path $inputs.FullName 'malformed.json'
 [IO.File]::WriteAllText($malformed, '{"openapi":')
 
@@ -60,6 +63,12 @@ $examples = Join-Path $PSScriptRoot '../examples'
 $base30 = Join-Path $examples 'base.yaml'
 $added = Join-Path $examples 'compatible.yaml'
 $breaking30 = Join-Path $examples 'breaking.yaml'
+$linkedExamples = Join-Path $inputs.FullName 'linked examples'
+if (-not (Test-Path -LiteralPath $linkedExamples)) {
+    $linkType = if ([IO.Path]::DirectorySeparatorChar -eq '\') { 'Junction' } else { 'SymbolicLink' }
+    $null = New-Item -ItemType $linkType -Path $linkedExamples -Target (Resolve-Path -LiteralPath $examples).Path
+}
+$linkedSpec = Join-Path $linkedExamples 'base.yaml'
 $reordered = Join-Path $inputs.FullName 'reordered response.yaml'
 $reorderedSpec = (Get-Content -Raw -LiteralPath $breaking30) -replace '(?m)(  title: Guardian Example)\r?\n(  version: 1\.0\.0)', ('$2' + [Environment]::NewLine + '$1')
 [IO.File]::WriteAllText($reordered, "# Same schema, different order and lines$([Environment]::NewLine)$reorderedSpec")
@@ -67,6 +76,12 @@ $reorderedSpec = (Get-Content -Raw -LiteralPath $breaking30) -replace '(?m)(  ti
 $goldens = @(
     @{ Name = 'validate-yaml-30'; Args = @('validate', $base30); Code = 0 }
     @{ Name = 'validate-json-31'; Args = @('validate', $base31); Code = 0 }
+    @{ Name = 'rooted-validation'; Args = @('validate', $base31, '--input-root', $inputs.FullName); Code = 0 }
+    @{ Name = 'outside-input-root'; Args = @('validate', $base30, '--input-root', $inputs.FullName);
+       Code = 3; Error = 'outside the input root' }
+    @{ Name = 'linked-input-directory'; Args = @('validate', $linkedSpec, '--input-root', $inputs.FullName);
+       Code = 3; Error = 'symbolic links or reparse points' }
+    @{ Name = 'external-reference'; Args = @('validate', $externalRef); Code = 3; Error = 'internal JSON Pointer' }
     @{ Name = 'unchanged'; Args = @('compare', '--base', $base30, '--candidate', $base30); Code = 0; Empty = $true }
     @{ Name = 'endpoint-added'; Args = @('compare', '--base', $base30, '--candidate', $added); Code = 0;
        Rule = 'endpoint-added'; Severity = 'INFO'; Method = 'GET'; Path = '/health' }
@@ -87,6 +102,8 @@ $goldens = @(
        Rule = 'response-property-type-changed'; Severity = 'ERR'; Method = 'GET'; Path = '/tasks' }
     @{ Name = 'malformed'; Args = @('validate', $malformed); Code = 3; Error = 'syntax' }
     @{ Name = 'unsupported'; Args = @('validate', $unsupported); Code = 3; Error = 'OpenAPI version' }
+    @{ Name = 'mixed-dialects'; Args = @('compare', '--base', $base30, '--candidate', $base31);
+       Code = 3; Error = 'same OpenAPI major and minor' }
     @{ Name = 'engine-failure'; Args = @('validate', $base31); Code = 4; Error = 'GUARDIAN_OASDIFF_PATH'; MissingEngine = $true }
 )
 
@@ -150,7 +167,6 @@ try {
     }
     if ($actualFingerprint -ne $expectedFingerprint) { throw 'Fingerprint changed after reordering YAML.' }
     Invoke-Case @{ Name = 'semantic-validation'; Args = @('validate', $semanticError); Code = 3; Error = 'schema-type-unsupported' }
-    Invoke-Case @{ Name = 'mixed-dialects'; Args = @('compare', '--base', $base30, '--candidate', $base31); Code = 3; Error = 'same OpenAPI major and minor' }
     Invoke-Case @{ Name = 'duplicate-option'; Args = @('compare', '--base', $base30, '--base', $base30); Code = 1; Error = 'Invalid arguments' }
 
     $testEngineName = if ([IO.Path]::DirectorySeparatorChar -eq '\') { 'Guardian.TestEngine.exe' } else { 'Guardian.TestEngine' }

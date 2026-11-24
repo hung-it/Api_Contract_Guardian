@@ -71,6 +71,16 @@ CV sau khi kiểm chứng integration có thể dùng câu sau:
 
 ## Tiến độ thực hiện
 
+### Kế hoạch triển khai tuần 4–5
+
+- **T14:** Xác minh branch protection, runner và `Pipelines must succeed` trên GitLab Guardian. Thử cấu hình gate do Maintainer quản lý. Lưu kết quả MR tương thích, breaking và hash policy từ target.
+- **T15:** Giới hạn đường dẫn spec và policy khi truyền `--input-root`. Kiểm chứng đường dẫn, refs và giới hạn process trên Windows/Linux. Chạy image offline.
+- **T16:** Đạt ít nhất 30 golden cases, đo branch coverage policy core với mục tiêu 90%, kiểm tra 10 lần lặp cho mỗi verdict PASS và FAIL, bổ sung policy reference và threat model.
+- **T17:** Publish P0 `0.1.1-rc.1`, ghim oasdiff 1.38.0, nghiệm thu checkout sạch và chạy đúng digest cho ba mã `0/2/3`.
+- **T18–T20:** Dùng worktree FlowForge riêng từ `main` đã xác minh cùng SHA. Thêm `openapi_sync`, bootstrap baseline/policy qua review trên protected `integration/guardian` và chạy cùng một MR từ breaking sang compatible. Lưu cả hai report mỗi lần cùng full SHA, digest và link pipeline để dùng ở tuần 6.
+
+### Kết quả theo mốc
+
 | Mốc | Trạng thái | Thay đổi và bằng chứng |
 |---|---|---|
 | Tuần 1 · T01–T05 | Hoàn thành | GitHub/GitLab cùng SHA `f59099a`. Build, 5 xUnit cases, 5 CLI smoke cases và probes oasdiff đều qua. [Pipeline GitLab](https://gitlab.com/hung-it/api_contract_guardian/-/pipelines/3102928132) · [Chi tiết](../docs/week-1-verification.md) |
@@ -82,3 +92,8 @@ CV sau khi kiểm chứng integration có thể dùng câu sau:
 | Tuần 3 · T11 | Hoàn thành | `compare --policy --out` xuất JSON/Markdown v1 cùng verdict và provenance. Windows qua format, Release build, 5 CLI smoke và 26 ca golden; chạy lặp cho cùng hash hai report. Hai ca FlowForge tiếp tục qua. |
 | Tuần 3 · T12 | Hoàn thành | Image Linux AMD64 chạy bằng CLI `0.1.0` và oasdiff `1.38.0`. Đã sửa lỗi dọn cgroup của .NET build server và bước dọn thư mục xác thực của BuildKit. Registry và artifact metadata cùng digest `sha256:f134c35b8d890a09a3fd8069f388f3e9b5ce3e0f736076134fcf82c55f31da37`. Pull theo digest và chạy Docker `--network none` qua PASS/FAIL với cả hai report. [Job publish](https://gitlab.com/hung-it/api_contract_guardian/-/jobs/18282366263) |
 | Tuần 3 · T13 | Hoàn thành | Gate ghim image theo digest và lấy baseline cùng policy từ một protected target SHA. Đã đối chiếu log, JSON v1 và Markdown của ba detached MR: [!1 tương thích, exit 0](https://gitlab.com/hung-it/api_contract_guardian/-/merge_requests/1), [!2 breaking, exit 2](https://gitlab.com/hung-it/api_contract_guardian/-/merge_requests/2) và [!3 thiếu baseline, exit 3](https://gitlab.com/hung-it/api_contract_guardian/-/merge_requests/3). Hash policy khớp với target ở cả ba ca, kể cả khi candidate !1 có sửa policy. Cả ba job lưu đủ hai báo cáo. |
+| Tuần 4 · T14 | Đang kiểm chứng | GitLab đã lưu `Pipelines must succeed` cho Guardian, với skipped pipelines không tính là thành công. Chờ xác nhận hai MR theo cấu hình RC và khả năng ghim CI độc lập. |
+| Tuần 4 · T15 | Hoàn thành | CLI có `--input-root` cho validate/compare, kiểm tra spec và policy tường minh. Windows qua ca junction, path ngoài root, external ref, giới hạn spec/engine và snapshot. Image Linux cục bộ với oasdiff 1.38.0 chạy `--network none` đúng ba mã `0/2/3` và ghi đủ JSON/Markdown. |
+| Tuần 4 · T16 | Hoàn thành | 80 xUnit, 32 golden cases và 100% branch coverage của `CompatibilityPolicy` trong Cobertura. Hai bộ input PASS/FAIL chạy 10 lần mỗi bộ, cùng SHA-256 cho cả hai report. Có [policy reference](../docs/policy-reference.md) và [threat model](../docs/threat-model.md). |
+| Tuần 4 · T17 | Đang kiểm chứng | Build image Linux cục bộ với CLI `0.1.1-rc.1`, oasdiff `1.38.0` và kiểm checksum archive. Chờ pipeline publish, digest registry và nghiệm thu từ checkout sạch. |
+| Tuần 5 · T18–T19 | Đang triển khai | Hai lần export từ worktree riêng cho OpenAPI 3.1.0 có cùng SHA-256 `fec613871b70272b42711155899c3d9492520665d6dc0234f4ed5773d074cc21`. Nhánh `integration/guardian` bắt đầu từ SHA chung `19bb09f`. GitLab bảo vệ nhánh với merge dành cho Maintainers và quyền push trực tiếp là `No one`. Chờ MR bootstrap và pipeline. |

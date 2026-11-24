@@ -19,7 +19,7 @@ verify:
     - dotnet restore Guardian.slnx --locked-mode
     - dotnet build Guardian.slnx -c Release --no-restore -warnaserror
     - dotnet format Guardian.slnx --verify-no-changes --no-restore
-    - dotnet test Guardian.slnx -c Release --no-build --logger trx --results-directory artifacts/tests
+    - dotnet test Guardian.slnx -c Release --no-build --logger trx --collect "XPlat Code Coverage" --results-directory artifacts/tests
     - dotnet publish src/Guardian.Cli -c Release --no-build -o artifacts/guardian
     - pwsh -NoProfile -File scripts/verify-cli.ps1
     - pwsh -NoProfile -Command '$engine = & ./scripts/install-oasdiff.ps1; & ./scripts/probe-oasdiff.ps1 -Engine $engine; & ./scripts/verify-contracts.ps1 -Engine $engine; & ./scripts/verify-policy.ps1 -Engine $engine'
@@ -48,6 +48,7 @@ publish_cli:
         - global.json
         - Directory.Build.props
         - scripts/install-oasdiff.ps1
+        - scripts/check-merge-request.sh
         - scripts/publish-cli.sh
         - src/**/*
   script:

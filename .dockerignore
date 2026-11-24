@@ -5,5 +5,6 @@
 !src/**
 !scripts/
 !scripts/install-oasdiff.ps1
+!scripts/check-merge-request.sh
 **/bin/
 **/obj/

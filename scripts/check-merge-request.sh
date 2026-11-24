@@ -16,7 +16,7 @@ case "$target" in
 esac
 
 cd "${CI_PROJECT_DIR:?}"
-mkdir -p reports
+mkdir reports
 inputs=$(mktemp -d)
 trap 'rm -f "$inputs/base.yaml" "$inputs/candidate.yaml" "$inputs/policy.yml"; rmdir "$inputs"' EXIT
 
@@ -31,14 +31,15 @@ export GUARDIAN_BASELINE_SHA GUARDIAN_CANDIDATE_SHA
 printf 'Guardian target %s at %s; candidate %s\n' "$target" "$GUARDIAN_BASELINE_SHA" "$GUARDIAN_CANDIDATE_SHA"
 
 extract_if_present() {
-    if repo_git cat-file -e "$1" 2>/dev/null; then
-        repo_git show "$1" > "$2"
-    fi
+    entry=$(repo_git ls-tree "$1" -- "$2")
+    case "${entry%% *}" in
+        100644|100755) repo_git show "$1:$2" > "$3" ;;
+    esac
 }
 
-extract_if_present "$GUARDIAN_BASELINE_SHA:openapi/demo.yaml" "$inputs/base.yaml"
-extract_if_present "$GUARDIAN_BASELINE_SHA:.guardian.yml" "$inputs/policy.yml"
-extract_if_present "$GUARDIAN_CANDIDATE_SHA:openapi/demo.yaml" "$inputs/candidate.yaml"
+extract_if_present "$GUARDIAN_BASELINE_SHA" openapi/demo.yaml "$inputs/base.yaml"
+extract_if_present "$GUARDIAN_BASELINE_SHA" .guardian.yml "$inputs/policy.yml"
+extract_if_present "$GUARDIAN_CANDIDATE_SHA" openapi/demo.yaml "$inputs/candidate.yaml"
 
 guardian compare --base "$inputs/base.yaml" --candidate "$inputs/candidate.yaml" \
-    --policy "$inputs/policy.yml" --out reports
+    --policy "$inputs/policy.yml" --input-root "$inputs" --out reports

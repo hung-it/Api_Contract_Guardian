@@ -12,7 +12,7 @@ try {
     foreach ($case in @(
         @{ Name = 'no arguments'; Arguments = @(); Code = 0; Output = 'Usage: guardian' }
         @{ Name = '--help'; Arguments = @('--help'); Code = 0; Output = 'Usage: guardian' }
-        @{ Name = 'version'; Arguments = @('version'); Code = 0; Output = '^0\.1\.0$' }
+        @{ Name = 'version'; Arguments = @('version'); Code = 0; Output = '^0\.1\.1-rc\.1$' }
         @{ Name = 'unknown command'; Arguments = @('unknown'); Code = 1; Error = 'Invalid arguments' }
         @{ Name = 'extra argument'; Arguments = @('version', 'extra'); Code = 1; Error = 'Invalid arguments' }
     )) {

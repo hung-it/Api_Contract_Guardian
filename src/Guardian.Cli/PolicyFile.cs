@@ -17,7 +17,7 @@ internal sealed record PolicyFile(CompatibilityPolicy Policy, byte[] Bytes)
           fail_on_unknown: true
         """;
 
-    internal static PolicyFile Load(string? path)
+    internal static PolicyFile Load(string? path, string? inputRoot = null)
     {
         if (path is null)
         {
@@ -32,7 +32,8 @@ internal sealed record PolicyFile(CompatibilityPolicy Policy, byte[] Bytes)
 
         try
         {
-            using var file = File.OpenRead(path);
+            var fullPath = inputRoot is null ? path : InputPath.ResolveUnderRoot(path, inputRoot);
+            using var file = File.OpenRead(fullPath);
             var length = file.Length;
             if (length > MaximumBytes)
             {
@@ -45,6 +46,10 @@ internal sealed record PolicyFile(CompatibilityPolicy Policy, byte[] Bytes)
                 throw new PolicyException("Policy changed during reading.");
             }
             return Parse(bytes);
+        }
+        catch (InputPathException error)
+        {
+            throw new PolicyException(error.Message);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException
             or ArgumentException or NotSupportedException)
