@@ -41,6 +41,70 @@ $removedRequired = Write-Variant 'removed-required-response' { param($spec)
     $schema.properties.PSObject.Properties.Remove('task_id')
     $schema.required = @('state')
 }
+$optionalResponse = Write-Variant 'optional-response' { param($spec)
+    $spec.components.schemas.TaskResult.required = @('state')
+}
+$optionalQuery = Write-Variant 'optional-query' { param($spec)
+    $spec.paths.'/tasks'.get.parameters += @{ name = 'state'; in = 'query'; schema = @{ type = 'string' } }
+}
+$optionalBody = Write-Variant 'optional-body' { param($spec)
+    $spec.paths.'/tasks'.post.requestBody.content.'application/json'.schema.properties |
+        Add-Member -NotePropertyName label -NotePropertyValue @{ type = 'string' }
+}
+$changedMediaType = Write-Variant 'changed-request-media-type' { param($spec)
+    $content = $spec.paths.'/tasks'.post.requestBody.content
+    $content | Add-Member -NotePropertyName 'application/xml' -NotePropertyValue $content.'application/json'
+    $content.PSObject.Properties.Remove('application/json')
+}
+$closedBody = Write-Variant 'closed-body' { param($spec)
+    $spec.paths.'/tasks'.post.requestBody.content.'application/json'.schema |
+        Add-Member -NotePropertyName additionalProperties -NotePropertyValue $false
+}
+$closedBodyReformatted = Join-Path $inputs.FullName 'closed-body-reformatted.json'
+$reformatted = Get-Content -Raw -LiteralPath $closedBody | ConvertFrom-Json
+$reformatted.info | Add-Member -NotePropertyName description -NotePropertyValue 'Moved source lines'
+[IO.File]::WriteAllText($closedBodyReformatted, ($reformatted | ConvertTo-Json -Depth 40 -Compress))
+$scalarBody = Write-Variant 'scalar-body' { param($spec)
+    $spec.paths.'/tasks'.post.requestBody.content.'application/json'.schema = @{ type = 'string' }
+}
+$closedScalar = Write-Variant 'closed-scalar' { param($spec)
+    $spec.paths.'/tasks'.post.requestBody.content.'application/json'.schema = @{ type = 'string'; additionalProperties = $false }
+}
+function Write-ArrayBody([string]$Name, [bool]$AllowExtras) {
+    Write-Variant $Name {
+        param($spec)
+        $spec.paths.'/tasks'.post.requestBody.content.'application/json'.schema = @{
+            type = 'object'; properties = @{ nested = @{ type = 'array'; items = @{ '$ref' = '#/components/schemas/Item' } } }
+        }
+        $spec.components.schemas | Add-Member -NotePropertyName Item -NotePropertyValue @{
+            type = 'object'; additionalProperties = $AllowExtras
+            properties = @{ child = @{ '$ref' = '#/components/schemas/Item' } }
+        }
+    }
+}
+$arrayBody = Write-ArrayBody 'array-of-items' $true
+$closedArrayBody = Write-ArrayBody 'array-of-closed-items' $false
+$openYaml = Join-Path $inputs.FullName 'open-body.yaml'
+$closedYaml = Join-Path $inputs.FullName 'closed-body.yaml'
+$yaml = @'
+openapi: 3.0.3
+info: { title: Workflow Tasks, version: 1.0.0 }
+paths:
+  /tasks:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '204': { description: Accepted }
+'@
+[IO.File]::WriteAllText($openYaml, $yaml)
+[IO.File]::WriteAllText($closedYaml, $yaml.Replace('additionalProperties: true', 'additionalProperties: false'))
+$relaxed = Join-Path $inputs.FullName 'relaxed-policy.yml'
+$infoThreshold = Join-Path $inputs.FullName 'info-policy.yml'
+[IO.File]::WriteAllText($relaxed, "version: 1`ncompatibility: {fail_on: [ERR], fail_on_unknown: false}`n")
+[IO.File]::WriteAllText($infoThreshold, "version: 1`ncompatibility: {fail_on: [INFO], fail_on_unknown: true}`n")
 $throughRef = Write-Variant 'change-through-reference' { param($spec)
     $spec.components.schemas.TaskResult.properties.task_id.type = 'integer'
 }
@@ -97,6 +161,32 @@ $goldens = @(
        Rule = 'response-property-type-changed'; Severity = 'ERR'; Method = 'GET'; Path = '/runs' }
     @{ Name = 'response-required-removed'; Args = @('compare', '--base', $base31, '--candidate', $removedRequired); Code = 2;
        Rule = 'response-required-property-removed'; Severity = 'ERR'; Method = 'GET'; Path = '/tasks' }
+    @{ Name = 'response-became-optional'; Args = @('compare', '--base', $base31, '--candidate', $optionalResponse, '--policy', $relaxed);
+       Code = 2; Status = 'FAIL'; Rule = 'response-property-became-optional'; Severity = 'ERR'; Method = 'GET'; Path = '/tasks' }
+    @{ Name = 'request-media-type-removed'; Args = @('compare', '--base', $base31, '--candidate', $changedMediaType, '--policy', $relaxed);
+       Code = 2; Status = 'FAIL'; Rule = 'request-body-media-type-removed'; Severity = 'ERR'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'request-media-type-removed-strict'; Args = @('compare', '--base', $base31, '--candidate', $changedMediaType);
+       Code = 2; Status = 'FAIL'; Rule = 'request-body-media-type-added'; Severity = 'INFO'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'optional-query'; Args = @('compare', '--base', $base31, '--candidate', $optionalQuery);
+       Code = 0; Status = 'PASS'; Rule = 'new-optional-request-parameter'; Severity = 'INFO'; Method = 'GET'; Path = '/tasks' }
+    @{ Name = 'optional-query-info-threshold'; Args = @('compare', '--base', $base31, '--candidate', $optionalQuery, '--policy', $infoThreshold);
+       Code = 2; Status = 'FAIL'; Rule = 'new-optional-request-parameter'; Severity = 'INFO'; Method = 'GET'; Path = '/tasks' }
+    @{ Name = 'optional-body'; Args = @('compare', '--base', $base31, '--candidate', $optionalBody);
+       Code = 0; Status = 'PASS'; Rule = 'new-optional-request-property'; Severity = 'INFO'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'closed-request-body-json'; Args = @('compare', '--base', $base31, '--candidate', $closedBody,
+           '--out', (Join-Path $results.FullName 'closed-body-report'));
+       Code = 2; Status = 'FAIL'; FindingCount = 1; Rule = 'request-body-additional-properties-disallowed';
+       Severity = 'ERR'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'closed-request-body-yaml'; Args = @('compare', '--base', $openYaml, '--candidate', $closedYaml, '--policy', $relaxed);
+       Code = 2; Status = 'FAIL'; FindingCount = 1; Rule = 'request-body-additional-properties-disallowed';
+       Severity = 'ERR'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'opened-request-body'; Args = @('compare', '--base', $closedYaml, '--candidate', $openYaml);
+       Code = 0; Status = 'PASS'; Empty = $true }
+    @{ Name = 'additional-properties-on-scalar'; Args = @('compare', '--base', $scalarBody, '--candidate', $closedScalar);
+       Code = 0; Status = 'PASS'; Empty = $true }
+    @{ Name = 'closed-request-array-item-through-ref'; Args = @('compare', '--base', $arrayBody, '--candidate', $closedArrayBody);
+       Code = 2; Status = 'FAIL'; FindingCount = 1; Rule = 'request-body-additional-properties-disallowed';
+       Severity = 'ERR'; Method = 'POST'; Path = '/tasks' }
     @{ Name = 'docs-only'; Args = @('compare', '--base', $base31, '--candidate', $description); Code = 0; Empty = $true }
     @{ Name = 'internal-ref'; Args = @('compare', '--base', $base31, '--candidate', $throughRef); Code = 2;
        Rule = 'response-property-type-changed'; Severity = 'ERR'; Method = 'GET'; Path = '/tasks' }
@@ -139,6 +229,10 @@ function Invoke-Case([hashtable]$Case) {
             throw "$($Case.Name) returned an unexpected result envelope."
         }
         $findings = @($comparison.findings)
+        if ($Case.Status -and $comparison.status -ne $Case.Status) { throw "$($Case.Name) returned an unexpected verdict." }
+        if ($Case.ContainsKey('FindingCount') -and $findings.Count -ne $Case.FindingCount) {
+            throw "$($Case.Name) returned an unexpected finding count."
+        }
         if ($Case.Empty -and $findings.Count -ne 0) { throw "$($Case.Name) expected zero findings." }
         if ($Case.Rule) {
             $matching = @($findings | Where-Object {
@@ -156,10 +250,19 @@ function Invoke-Case([hashtable]$Case) {
 $previousEngine = $env:GUARDIAN_OASDIFF_PATH
 try {
     $expectedFingerprint = $null
+    $closedBodyFingerprint = $null
     foreach ($golden in $goldens) {
         $fingerprint = Invoke-Case $golden
         if ($golden.Name -eq 'response-type') { $expectedFingerprint = $fingerprint }
+        if ($golden.Name -eq 'closed-request-body-json') { $closedBodyFingerprint = $fingerprint }
     }
+
+    $reformattedFingerprint = Invoke-Case @{
+        Name = 'closed-request-body-reformatted'; Args = @('compare', '--base', $base31, '--candidate', $closedBodyReformatted);
+        Code = 2; Status = 'FAIL'; FindingCount = 1; Rule = 'request-body-additional-properties-disallowed';
+        Severity = 'ERR'; Method = 'POST'; Path = '/tasks'
+    }
+    if ($reformattedFingerprint -ne $closedBodyFingerprint) { throw 'Fingerprint changed after reformatting the closed request body.' }
 
     $actualFingerprint = Invoke-Case @{
         Name = 'reordered-yaml'; Args = @('compare', '--candidate', $reordered, '--base', $base30); Code = 2;

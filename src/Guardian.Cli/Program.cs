@@ -63,7 +63,8 @@ if (basePath is not null)
             return (int)GateExitCode.Success;
         }
 
-        decision = policy!.Policy.Evaluate(FindingNormalizer.Parse(output));
+        var requestBodyChanges = RequestBodyCompatibility.Compare(spec, candidate!);
+        decision = policy!.Policy.Evaluate(FindingNormalizer.Parse(output, requestBodyChanges));
         exit = decision.Status == AnalysisStatus.PASS ? GateExitCode.Success : GateExitCode.PolicyFailure;
     }
     catch (SpecInputException error)

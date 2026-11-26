@@ -18,7 +18,13 @@ public sealed class CompatibilityPolicy
         "api-removed-without-deprecation",
         "request-parameter-became-required",
         "new-required-request-property",
+        "new-optional-request-parameter",
+        "new-optional-request-property",
+        "request-body-additional-properties-disallowed",
+        "request-body-media-type-added",
+        "request-body-media-type-removed",
         "request-property-enum-value-removed",
+        "response-property-became-optional",
         "response-property-type-changed",
         "response-required-property-removed",
     };

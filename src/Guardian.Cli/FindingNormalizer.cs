@@ -7,13 +7,14 @@ namespace Guardian.Cli;
 
 internal static class FindingNormalizer
 {
-    internal static ContractFinding[] Parse(byte[] output)
+    internal static ContractFinding[] Parse(byte[] output, IReadOnlyList<ContractFinding>? supplemental = null)
     {
         try
         {
             using var document = JsonDocument.Parse(output, new JsonDocumentOptions { AllowDuplicateProperties = false });
             return document.RootElement.EnumerateArray()
                 .Select(ReadFinding)
+                .Concat(supplemental ?? [])
                 .OrderByDescending(finding => finding.Severity)
                 .ThenBy(finding => finding.RuleId, StringComparer.Ordinal)
                 .ThenBy(finding => finding.Method, StringComparer.Ordinal)
@@ -50,13 +51,14 @@ internal static class FindingNormalizer
         var path = OptionalString(entry, "path");
         var section = OptionalString(entry, "section");
         string?[] identity = ["guardian-finding-v1", "oasdiff", id, method, path, section, upstreamFingerprint];
-        var hash = SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(identity));
         var severity = CompatibilityPolicy.IsKnownRule(id) ? (FindingSeverity)level : FindingSeverity.UNKNOWN;
 
         return new ContractFinding(id, severity, method, path, section,
-            ReadLocation(entry, "baseSource"), ReadLocation(entry, "revisionSource"), message,
-            $"sha256:{Convert.ToHexStringLower(hash)}");
+            ReadLocation(entry, "baseSource"), ReadLocation(entry, "revisionSource"), message, Fingerprint(identity));
     }
+
+    internal static string Fingerprint(string?[] identity) =>
+        $"sha256:{Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(identity)))}";
 
     private static string? OptionalString(JsonElement entry, string property)
     {
