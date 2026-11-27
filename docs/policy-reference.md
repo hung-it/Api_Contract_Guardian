@@ -19,6 +19,7 @@ Run `guardian compare --base base.json --candidate candidate.json --policy .guar
 - `new-optional-request-parameter` (INFO)
 - `new-optional-request-property` (INFO)
 - `request-body-additional-properties-disallowed` (ERR)
+- `request-body-additional-properties-narrowed` (ERR)
 - `request-body-media-type-added` (INFO)
 - `request-body-media-type-removed` (ERR)
 - `request-body-optional-property-narrowed` (ERR)
@@ -27,17 +28,20 @@ Run `guardian compare --base base.json --candidate candidate.json --policy .guar
 - `request-property-min-length-set` (ERR)
 - `request-property-min-length-unset` (INFO)
 - `request-property-enum-value-removed`
+- `request-property-type-changed` (ERR)
+- `request-property-type-generalized` (INFO)
 - `response-property-became-optional` (ERR)
 - `response-property-type-changed`
 - `response-required-property-removed`
 
-The additional-properties rule checks closure of an existing request object that can accept
-additional properties. It includes an omitted or true setting and simple typed schemas.
-Adding a typed optional property can narrow a previously unrestricted value for that key.
+The additional-properties rules check closure and narrowing of an existing request object
+that can accept additional properties. They cover unrestricted values and plain type
+domains, including the difference between numbers and integers.
+Adding an optional property can narrow the previously allowed value for that key.
 The supplemental checks cover nested properties, array items and internal references.
 A validation change in a composed schema that the comparison cannot prove compatible
 produces the UNKNOWN finding `request-body-compatibility-unproven`. Description and
-example edits leave the validation shape unchanged.
+example edits and reordering unchanged `allOf` branches leave the validation shape unchanged.
 
 An unmapped finding stays UNKNOWN. With `fail_on_unknown: true`, UNKNOWN yields `INDETERMINATE` and exit `2`, even if there are ERR findings. With `false`, known findings decide the verdict. A known finding at or above the effective threshold yields `FAIL` and exit `2`. Otherwise the report is `PASS` and the exit code is `0`.
 

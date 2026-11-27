@@ -75,10 +75,27 @@ function Write-ObjectBody([string]$Name, [hashtable]$Schema) {
     }
 }
 $openObject = @{ type = 'object'; properties = @{ label = @{ type = 'string' } } }
+$explicitOpen = Write-ObjectBody 'explicit-open' ($openObject + @{ additionalProperties = $true })
+$stringExtras = Write-ObjectBody 'string-extras' ($openObject + @{ additionalProperties = @{ type = 'string' } })
+$numberExtras = Write-ObjectBody 'number-extras' ($openObject + @{ additionalProperties = @{ type = 'number' } })
+$integerExtras = Write-ObjectBody 'integer-extras' ($openObject + @{ additionalProperties = @{ type = 'integer' } })
+$complexExtras = Write-ObjectBody 'complex-extras' ($openObject + @{ additionalProperties = @{ type = 'string'; minLength = 2 } })
+$freeOptional = Write-ObjectBody 'free-optional' @{
+    type = 'object'; additionalProperties = @{ type = 'string' }
+    properties = @{ label = @{ type = 'string' }; note = @{ description = 'Any JSON value' } }
+}
+$referenceExtras = Write-Variant 'reference-extras' { param($spec)
+    $spec.components.schemas | Add-Member -NotePropertyName ExtraValue -NotePropertyValue @{ type = 'string' }
+    $spec.paths.'/tasks'.post.requestBody.content.'application/json'.schema = $openObject +
+        @{ additionalProperties = @{ '$ref' = '#/components/schemas/ExtraValue' } }
+}
 $closedObject = $openObject + @{ additionalProperties = $false }
 $allOfOpen = Write-ObjectBody 'allof-open' @{ allOf = @($openObject) }
 $allOfClosed = Write-ObjectBody 'allof-closed' @{ allOf = @($closedObject) }
 $allOfAnnotated = Write-ObjectBody 'allof-annotated' @{ allOf = @($openObject + @{ description = 'Updated' }) }
+$requiredLabel = @{ type = 'object'; required = @('label') }
+$allOfOrdered = Write-ObjectBody 'allof-ordered' @{ allOf = @($openObject, $requiredLabel) }
+$allOfReordered = Write-ObjectBody 'allof-reordered' @{ allOf = @($requiredLabel, $openObject) }
 $capped = @{ required = @('label'); maxProperties = 1 }
 $cappedOpen = Write-ObjectBody 'capped-open' ($openObject + $capped)
 $cappedClosed = Write-ObjectBody 'capped-closed' ($closedObject + $capped)
@@ -202,6 +219,24 @@ $goldens = @(
        Code = 2; Status = 'FAIL'; Rule = 'request-body-optional-property-narrowed'; Severity = 'ERR'; Method = 'POST'; Path = '/tasks' }
     @{ Name = 'typed-additional-closed'; Args = @('compare', '--base', $typedAdditional, '--candidate', $closedBody);
        Code = 2; Status = 'FAIL'; Rule = 'request-body-additional-properties-disallowed'; Severity = 'ERR'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'implicit-open-to-typed'; Args = @('compare', '--base', $base31, '--candidate', $typedAdditional);
+       Code = 2; Status = 'FAIL'; Rule = 'request-body-additional-properties-narrowed'; Severity = 'ERR'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'explicit-open-to-typed'; Args = @('compare', '--base', $explicitOpen, '--candidate', $stringExtras);
+       Code = 2; Status = 'FAIL'; Rule = 'request-body-additional-properties-narrowed'; Severity = 'ERR'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'typed-to-open'; Args = @('compare', '--base', $stringExtras, '--candidate', $explicitOpen);
+       Code = 0; Status = 'PASS' }
+    @{ Name = 'numeric-additional-narrowed'; Args = @('compare', '--base', $numberExtras, '--candidate', $integerExtras);
+       Code = 2; Status = 'FAIL'; Rule = 'request-body-additional-properties-narrowed'; Severity = 'ERR'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'numeric-additional-widened'; Args = @('compare', '--base', $integerExtras, '--candidate', $numberExtras);
+       Code = 0; Status = 'PASS' }
+    @{ Name = 'typed-additional-through-ref'; Args = @('compare', '--base', $explicitOpen, '--candidate', $referenceExtras);
+       Code = 2; Status = 'FAIL'; Rule = 'request-body-additional-properties-narrowed'; Severity = 'ERR'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'complex-additional-unproven'; Args = @('compare', '--base', $stringExtras, '--candidate', $complexExtras);
+       Code = 2; Status = 'INDETERMINATE'; Rule = 'request-body-compatibility-unproven'; Severity = 'UNKNOWN'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'unrestricted-optional-over-typed-additional'; Args = @('compare', '--base', $stringExtras, '--candidate', $freeOptional);
+       Code = 0; Status = 'PASS' }
+    @{ Name = 'allof-reordered'; Args = @('compare', '--base', $allOfOrdered, '--candidate', $allOfReordered);
+       Code = 0; Status = 'PASS'; Empty = $true }
     @{ Name = 'allof-closure-unproven'; Args = @('compare', '--base', $allOfOpen, '--candidate', $allOfClosed);
        Code = 2; Status = 'INDETERMINATE'; Rule = 'request-body-compatibility-unproven'; Severity = 'UNKNOWN'; Method = 'POST'; Path = '/tasks' }
     @{ Name = 'allof-docs-only'; Args = @('compare', '--base', $allOfOpen, '--candidate', $allOfAnnotated);
