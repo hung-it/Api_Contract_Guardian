@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { authAction, onSessionExpired, useResource } from "./api";
+import { authAction, onSessionExpired, useResource, verifyAnalysis } from "./api";
 import "./style.css";
 
 type Verdict = "PASS" | "FAIL" | "INDETERMINATE";
@@ -9,6 +9,9 @@ type Project = { id: string; name: string; role: string };
 type Detail = Analysis & {
   summary: { errors: number; warnings: number; info: number; unknown: number };
   provenance: Record<string, string | null>;
+  verification: { status: "UNVERIFIED" } | {
+    status: "VERIFIED"; provider: string; image_digest: string; verified_at: string;
+  };
   diagnostics: { code: string; message: string }[];
 };
 type Source = { line: number; column: number };
@@ -20,6 +23,7 @@ type Finding = {
 const provenanceLabels: Record<string, string> = {
   guardian_version: "Guardian version", diff_engine: "Diff engine", diff_engine_version: "Engine version",
   baseline_commit_sha: "Baseline commit", candidate_commit_sha: "Candidate commit", pipeline_id: "Pipeline",
+  ci_provider: "CI provider", ci_job_id: "CI job",
   baseline_sha256: "Baseline hash", candidate_sha256: "Candidate hash", policy_sha256: "Policy hash",
 };
 
@@ -99,7 +103,8 @@ function Workspace({ projects }: { projects: Project[] }) {
       }}>{projects.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <span className="project-role">{project.role}</span>
     </div>
-    {analysisId ? <AnalysisView key={analysisId} id={analysisId} back={() => setAnalysis(undefined)} />
+    {analysisId ? <AnalysisView key={analysisId} id={analysisId} canVerify={project.role === "Maintainer"}
+      back={() => setAnalysis(undefined)} />
       : <History key={project.id} project={project} open={setAnalysis} />}
   </main>;
 }
@@ -137,8 +142,22 @@ function VerdictLabel({ status }: { status: Verdict }) {
   return <span className={"verdict " + status.toLowerCase()}>{status}</span>;
 }
 
-function AnalysisView({ id, back }: { id: string; back: () => void }) {
+function AnalysisView({ id, back, canVerify }: { id: string; back: () => void; canVerify: boolean }) {
   const { resource, retry } = useResource<Detail>("/analyses/" + id);
+  const [verificationError, setVerificationError] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  async function verify() {
+    setVerifying(true);
+    setVerificationError("");
+    try {
+      await verifyAnalysis(id);
+      retry();
+    } catch (error) {
+      setVerificationError(error instanceof Error ? error.message : "Verification failed.");
+    } finally {
+      setVerifying(false);
+    }
+  }
   return <section>
     <button className="link" onClick={back}>← Analysis history</button>
     <div className="detail-title"><h1>Contract analysis</h1>
@@ -154,6 +173,12 @@ function AnalysisView({ id, back }: { id: string; back: () => void }) {
         <FindingList analysis={id} />
         <section className="card provenance">
           <h2>Provenance</h2>
+          <p role="status">{resource.value.verification.status === "VERIFIED" ? "CI evidence verified" : "CI evidence unverified"}</p>
+          {resource.value.verification.status === "VERIFIED"
+            ? <p className="mono">{resource.value.verification.image_digest}</p>
+            : canVerify && resource.value.provenance.ci_provider &&
+              <button disabled={verifying} onClick={() => void verify()}>{verifying ? "Verifying…" : "Verify CI evidence"}</button>}
+          {verificationError && <p role="alert">{verificationError}</p>}
           <dl>{Object.entries(provenanceLabels).map(([field, label]) =>
             <div key={field}><dt>{label}</dt><dd className="mono">{resource.value.provenance[field] ?? "Unavailable"}</dd></div>)}</dl>
         </section>

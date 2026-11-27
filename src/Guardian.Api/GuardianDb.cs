@@ -26,6 +26,7 @@ public sealed class GuardianDb(DbContextOptions<GuardianDb> options) : DbContext
         model.Entity<Analysis>().HasIndex(analysis => new { analysis.ProjectId, analysis.CreatedAt, analysis.Id })
             .IsDescending(false, true, true);
         model.Entity<Analysis>().Property(analysis => analysis.Report).HasColumnType("jsonb");
+        model.Entity<Analysis>().Property(analysis => analysis.Verification).HasColumnType("jsonb");
         model.Entity<Finding>().ToTable("findings").HasOne<Analysis>().WithMany(analysis => analysis.Findings)
             .HasForeignKey(finding => finding.AnalysisId);
         model.Entity<Finding>().HasKey(finding => new { finding.AnalysisId, finding.Ordinal });
@@ -106,6 +107,7 @@ public sealed class Analysis
     public required string AnalysisKey { get; set; }
     public required string Status { get; set; }
     public required string Report { get; set; }
+    public string? Verification { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public List<Finding> Findings { get; } = [];
 }

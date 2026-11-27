@@ -68,6 +68,11 @@ paths:
         '204': { description: Session cookie issued }
         '400': { description: Credentials or antiforgery request malformed }
         '401': { description: Credentials rejected }
+        '429':
+          description: Login attempts exceeded the peer IP quota
+          headers:
+            Retry-After:
+              schema: { type: integer, minimum: 1 }
   /api/v1/auth/logout:
     post:
       operationId: signOut
@@ -137,14 +142,35 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/Analysis'
                   - type: object
-                    required: [project_id, summary, provenance, diagnostics]
+                    required: [project_id, summary, provenance, diagnostics, verification]
                     properties:
                       project_id: { type: string, format: uuid }
                       summary: { type: object }
                       provenance: { type: object }
                       diagnostics: { type: array, items: { type: object } }
+                      verification: { $ref: '#/components/schemas/CiVerification' }
         '401': { $ref: '#/components/responses/SignInRequired' }
         '404': { $ref: '#/components/responses/Unavailable' }
+  /api/v1/analyses/{analysisId}/verification:
+    parameters:
+      - $ref: '#/components/parameters/AnalysisId'
+    post:
+      operationId: verifyAnalysis
+      security: [{ ReviewerSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Csrf'
+      responses:
+        '200':
+          description: CI artifact verified and recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerifiedEvidence' }
+        '400': { description: Antiforgery validation failed }
+        '401': { $ref: '#/components/responses/SignInRequired' }
+        '403': { $ref: '#/components/responses/MaintainerRequired' }
+        '404': { $ref: '#/components/responses/Unavailable' }
+        '409': { description: No matching trusted CI evidence }
+        '503': { description: CI provider unavailable or unconfigured }
   /api/v1/analyses/{analysisId}/findings:
     parameters:
       - $ref: '#/components/parameters/AnalysisId'
@@ -262,7 +288,7 @@ paths:
                     project_id: { type: string, format: uuid }
                     actor_id: { type: [string, 'null'], format: uuid }
                     actor_kind: { type: string }
-                    action: { type: string, enum: [token.created, token.revoked, analysis.published] }
+                    action: { type: string, enum: [token.created, token.revoked, analysis.published, analysis.verified] }
                     entity_id: { type: string, format: uuid }
                     created_at: { type: string, format: date-time }
         '401': { $ref: '#/components/responses/SignInRequired' }
@@ -304,6 +330,25 @@ components:
               status: { $ref: '#/components/schemas/Verdict' }
               created_at: { type: string, format: date-time }
   schemas:
+    CiVerification:
+      oneOf:
+        - type: object
+          required: [status]
+          properties:
+            status: { const: UNVERIFIED }
+        - $ref: '#/components/schemas/VerifiedEvidence'
+    VerifiedEvidence:
+      type: object
+      required: [status, provider, run_id, baseline_sha, candidate_sha, image_digest, report_sha256, verified_at]
+      properties:
+        status: { const: VERIFIED }
+        provider: { type: string, enum: [github, gitlab] }
+        run_id: { type: string }
+        baseline_sha: { type: string }
+        candidate_sha: { type: string }
+        image_digest: { type: string }
+        report_sha256: { type: string }
+        verified_at: { type: string, format: date-time }
     Verdict: { type: string, enum: [PASS, FAIL, INDETERMINATE] }
     Analysis:
       type: object

@@ -1,7 +1,9 @@
 using System.Globalization;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,6 +17,7 @@ internal static class HistoryEndpoints
         api.MapGet("/projects/{projectId:guid}/analyses", History);
         api.MapGet("/analyses/{analysisId:guid}", Detail);
         api.MapGet("/analyses/{analysisId:guid}/findings", Findings);
+        api.MapPost("/analyses/{analysisId:guid}/verification", Verify);
     }
 
     private static async Task<IResult> Projects(ClaimsPrincipal user, GuardianDb db, CancellationToken cancellationToken)
@@ -74,8 +77,80 @@ internal static class HistoryEndpoints
             Summary = report.GetProperty("summary"),
             Provenance = report.GetProperty("provenance"),
             Diagnostics = report.GetProperty("diagnostics"),
+            Verification = Verification(row.Verification),
         });
     }
+
+    private static async Task<IResult> Verify(Guid analysisId, HttpContext context, GuardianDb db,
+        IAntiforgery antiforgery, CiVerification verifier, CancellationToken cancellationToken)
+    {
+        var row = await Visible(db, context.User)
+            .SingleOrDefaultAsync(analysis => analysis.Id == analysisId, cancellationToken);
+        if (row is null)
+        {
+            return Results.NotFound();
+        }
+        if (await TokenEndpoints.Maintainer(row.ProjectId, context.User, db, cancellationToken) is { } denied)
+        {
+            return denied;
+        }
+        if (!await antiforgery.IsRequestValidAsync(context))
+        {
+            return Results.BadRequest();
+        }
+        if (row.Verification is not null)
+        {
+            return Results.Ok(Verification(row.Verification));
+        }
+
+        CiVerification.Evidence? evidence;
+        try
+        {
+            evidence = await verifier.Verify(row, cancellationToken);
+        }
+        catch (Exception error) when (error is JsonException or InvalidDataException or KeyNotFoundException
+            or InvalidOperationException or HttpRequestException { StatusCode: HttpStatusCode.NotFound or HttpStatusCode.Gone })
+        {
+            evidence = null;
+        }
+        catch (Exception error) when (error is HttpRequestException or IOException ||
+            error is OperationCanceledException && !cancellationToken.IsCancellationRequested)
+        {
+            return Results.Problem(statusCode: 503, title: "The CI provider is unavailable.");
+        }
+        if (evidence is null)
+        {
+            return Results.Problem(statusCode: 409, title: "The published report has no matching trusted CI evidence.");
+        }
+
+        var userId = ReviewerSession.UserId(context.User);
+        var json = JsonSerializer.Serialize(evidence, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var written = await db.Analyses.Where(analysis => analysis.Id == row.Id && analysis.Verification == null &&
+                db.Members.Any(member => member.ProjectId == analysis.ProjectId && member.UserId == userId &&
+                    member.Role == ProjectRole.Maintainer))
+            .ExecuteUpdateAsync(setters => setters.SetProperty(analysis => analysis.Verification, json), cancellationToken);
+        if (written == 1)
+        {
+            TokenEndpoints.Audit(db, row.ProjectId, userId, "reviewer", "analysis.verified", row.Id);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        await transaction.CommitAsync(cancellationToken);
+        if (written == 0)
+        {
+            if (await TokenEndpoints.Maintainer(row.ProjectId, context.User, db, cancellationToken) is { } revoked)
+            {
+                return revoked;
+            }
+            var recorded = await db.Analyses.Where(analysis => analysis.Id == row.Id).Select(analysis => analysis.Verification)
+                .SingleAsync(cancellationToken);
+            return recorded is null ? Results.Conflict() : Results.Ok(Verification(recorded));
+        }
+        return Results.Ok(Verification(json));
+    }
+
+    private static object Verification(string? json) => json is null
+        ? new { status = "UNVERIFIED" } : JsonSerializer.Deserialize<JsonElement>(json);
 
     private static async Task<IResult> Findings(Guid analysisId, int? limit, int? after, string? severity, string? rule,
         ClaimsPrincipal user, GuardianDb db, CancellationToken cancellationToken)

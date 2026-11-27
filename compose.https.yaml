@@ -1,0 +1,22 @@
+services:
+  api:
+    environment:
+      Guardian__AllowHttpLoopback: "false"
+      Guardian__TrustedProxy: ${GUARDIAN_HTTPS_PROXY_IP:-172.31.237.14}
+    networks: [default, https_edge]
+  web:
+    ports: !override
+      - "${GUARDIAN_HTTPS_BIND:-127.0.0.1}:${GUARDIAN_HTTPS_PORT:-19443}:443"
+    environment:
+      GUARDIAN_HTTPS_HOST: ${GUARDIAN_HTTPS_HOST:?Set the TLS hostname}
+    volumes:
+      - ./web/nginx.https.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ${GUARDIAN_TLS_DIR:?Set the certificate directory}:/tls:ro
+    networks:
+      https_edge:
+        ipv4_address: ${GUARDIAN_HTTPS_PROXY_IP:-172.31.237.14}
+networks:
+  https_edge:
+    ipam:
+      config:
+        - subnet: ${GUARDIAN_HTTPS_SUBNET:-172.31.237.0/28}

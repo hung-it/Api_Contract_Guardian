@@ -31,6 +31,7 @@ public abstract class PostgresApi : IAsyncLifetime
     protected Guid OtherProjectId { get; } = Guid.NewGuid();
     protected string Token { get; } = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32));
     protected GuardianDb Database() => new(new DbContextOptionsBuilder<GuardianDb>().UseNpgsql(_connection).Options);
+    protected virtual void Configure(IWebHostBuilder builder) { }
 
     protected WebApplicationFactory<Program> WithMissingDatabase()
     {
@@ -46,7 +47,7 @@ public abstract class PostgresApi : IAsyncLifetime
             new Project { Id = OtherProjectId, Name = "Separate project" });
         db.Tokens.Add(CreateToken(Token, ProjectId, "reports:write", DateTimeOffset.UtcNow.AddDays(1)));
         await db.SaveChangesAsync();
-        _factory = new ApiFactory(_connection);
+        _factory = new ApiFactory(_connection, Configure);
         Client = _factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost"),
@@ -118,10 +119,13 @@ public abstract class PostgresApi : IAsyncLifetime
         await db.Database.EnsureDeletedAsync();
     }
 
-    private sealed class ApiFactory(string connection) : WebApplicationFactory<Program>
+    private sealed class ApiFactory(string connection, Action<IWebHostBuilder>? configure = null) : WebApplicationFactory<Program>
     {
-        protected override void ConfigureWebHost(IWebHostBuilder builder) =>
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
             builder.ConfigureAppConfiguration((_, values) => values.AddInMemoryCollection(
                 new Dictionary<string, string?> { ["ConnectionStrings:Guardian"] = connection }));
+            configure?.Invoke(builder);
+        }
     }
 }

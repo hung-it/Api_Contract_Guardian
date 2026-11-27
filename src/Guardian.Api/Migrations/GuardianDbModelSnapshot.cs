@@ -52,6 +52,10 @@ namespace Guardian.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("status");
 
+                    b.Property<string>("Verification")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("verification");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ProjectId", "AnalysisKey")

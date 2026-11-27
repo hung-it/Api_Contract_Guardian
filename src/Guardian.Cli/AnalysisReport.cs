@@ -9,13 +9,17 @@ namespace Guardian.Cli;
 
 internal sealed record ReportProvenance(string GuardianVersion, string DiffEngine, string DiffEngineVersion,
     string? PolicySha256, string? BaselineSha256, string? CandidateSha256, string? BaselineCommitSha,
-    string? CandidateCommitSha, string? PipelineId)
+    string? CandidateCommitSha, string? PipelineId,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? CiProvider,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? CiJobId)
 {
     internal static ReportProvenance Create(string version, PolicyFile? policy, SpecDocument? baseline, SpecDocument? candidate) =>
         new(version, "oasdiff", OasdiffAdapter.Version, Hash(policy?.Bytes), Hash(baseline?.Bytes), Hash(candidate?.Bytes),
             Environment.GetEnvironmentVariable("GUARDIAN_BASELINE_SHA"),
             Environment.GetEnvironmentVariable("GUARDIAN_CANDIDATE_SHA"),
-            Environment.GetEnvironmentVariable("CI_PIPELINE_ID"));
+            Environment.GetEnvironmentVariable("GUARDIAN_CI_RUN_ID") ?? Environment.GetEnvironmentVariable("CI_PIPELINE_ID"),
+            Environment.GetEnvironmentVariable("GUARDIAN_CI_PROVIDER"),
+            Environment.GetEnvironmentVariable("GUARDIAN_CI_JOB_ID"));
 
     private static string? Hash(byte[]? bytes) => bytes is null
         ? null

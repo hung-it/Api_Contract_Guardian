@@ -8,6 +8,7 @@ export function onSessionExpired(listener: () => void) {
 class RequestError extends Error {
   constructor(public status: number) {
     super(status === 401 ? "Sign in to view reports." :
+      status === 429 ? "Too many sign-in attempts. Wait and try again." :
       status === 404 ? "This report is unavailable." : "Could not reach Guardian. Try again.");
   }
 }
@@ -32,6 +33,21 @@ export async function authAction(path: "login" | "logout", credentials?: { email
   } catch (error) {
     if (path === "login" && error instanceof RequestError && error.status === 401) {
       throw new Error("Email or password is incorrect.", { cause: error });
+    }
+    throw error;
+  }
+}
+
+export async function verifyAnalysis(id: string) {
+  const { token } = await request<{ token: string }>("/auth/csrf");
+  try {
+    await request("/analyses/" + id + "/verification", { method: "POST", headers: { "X-CSRF-TOKEN": token } });
+  } catch (error) {
+    if (error instanceof RequestError && error.status === 409) {
+      throw new Error("The report could not be matched to trusted CI evidence.", { cause: error });
+    }
+    if (error instanceof RequestError && error.status === 503) {
+      throw new Error("CI verification is unavailable. Try again later.", { cause: error });
     }
     throw error;
   }

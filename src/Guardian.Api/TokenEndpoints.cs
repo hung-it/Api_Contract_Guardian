@@ -111,7 +111,7 @@ internal static class TokenEndpoints
             .ToListAsync(cancellationToken));
     }
 
-    private static async Task<IResult?> Maintainer(Guid projectId, ClaimsPrincipal user, GuardianDb db,
+    internal static async Task<IResult?> Maintainer(Guid projectId, ClaimsPrincipal user, GuardianDb db,
         CancellationToken cancellationToken)
     {
         var userId = ReviewerSession.UserId(user);

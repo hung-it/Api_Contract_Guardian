@@ -100,6 +100,8 @@ Remove-Item Env:GUARDIAN_REPORT_TOKEN
 
 `publish` accepts JSON report v1 up to 10 MiB. It uses HTTPS or a loopback HTTP URL and reads the write token from the environment. On success it prints the analysis ID and verdict and exits `0`, including when the stored verdict is `FAIL`. An exact replay returns the same analysis ID. An incompatible payload for the same analysis key returns HTTP `409`. The bootstrap token expires after one day.
 
+For the local HTTPS profile and settings for independent GitHub and GitLab evidence verification, see [Demo HTTPS and CI evidence](docs/ci-evidence.md).
+
 Maintainers can list, create and revoke write tokens through `GET` and `POST /api/v1/projects/{projectId}/tokens` and `DELETE /api/v1/projects/{projectId}/tokens/{tokenId}`. Creation accepts `{"expires_in_days": 1}` with a range of 1–30 days and returns the secret once. Mutations require the reviewer session cookie and the `X-CSRF-TOKEN` header obtained from `GET /api/v1/auth/csrf`. `GET /api/v1/projects/{projectId}/audit-events` returns up to 100 recent events. The session, project membership and audit controls are covered by the PostgreSQL integration suite.
 
 See the [Report Store OpenAPI contract](openapi/guardian-http-v1.yaml) for routes, request shapes and authorization.

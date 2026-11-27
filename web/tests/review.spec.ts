@@ -14,6 +14,7 @@ test("reviews the actual FlowForge reports and filters the breaking change", asy
   await signIn(page);
   await page.getByRole("button", { name: /^Open FAIL report/ }).click();
   await expect(page.getByRole("heading", { name: "Contract analysis" })).toBeVisible();
+  await expect(page.getByText("CI evidence unverified", { exact: true })).toBeVisible();
   await expect(page.getByText("3107066933", { exact: true })).toBeVisible();
   await expect(page.getByText("GET /api/v1/runs/{run_id}", { exact: true })).toBeVisible();
   await page.getByLabel("Severity").selectOption("WARN");
@@ -55,4 +56,32 @@ test("hides protected content when a session expires", async ({ page }) => {
   await page.getByRole("button", { name: /^Open FAIL report/ }).click();
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Contract analysis" })).toHaveCount(0);
+});
+
+test("lets a maintainer retry verification and keeps the original verdict", async ({ page }) => {
+  let verified = false;
+  const digest = "sha256:" + "d".repeat(64);
+  await page.route(/\/api\/v1\/analyses\/[^/?]+$/, async route => {
+    const response = await route.fetch();
+    const detail = await response.json();
+    detail.provenance.ci_provider = "github";
+    detail.verification = verified ? { status: "VERIFIED", image_digest: digest } : { status: "UNVERIFIED" };
+    await route.fulfill({ response, json: detail });
+  });
+  await page.route("**/api/v1/analyses/*/verification", route => route.fulfill({ status: 409 }), { times: 1 });
+  await signIn(page);
+  await page.getByRole("button", { name: /^Open FAIL report/ }).click();
+  const button = page.getByRole("button", { name: "Verify CI evidence" });
+  await button.click();
+  await expect(page.getByRole("alert")).toHaveText("The report could not be matched to trusted CI evidence.");
+  await page.route("**/api/v1/analyses/*/verification", route => {
+    expect(route.request().headers()["x-csrf-token"]).toBeTruthy();
+    verified = true;
+    return route.fulfill({ json: { status: "VERIFIED" } });
+  });
+  await button.click();
+  await expect(page.getByText("CI evidence verified", { exact: true })).toBeVisible();
+  await expect(page.getByText(digest, { exact: true })).toBeVisible();
+  await expect(page.getByText("FAIL", { exact: true })).toBeVisible();
+  await expect(button).toHaveCount(0);
 });

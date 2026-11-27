@@ -149,7 +149,13 @@ internal static class ReportIngestion
             "pipeline_id", "baseline_commit_sha", "candidate_commit_sha", "baseline_sha256",
             "candidate_sha256", "policy_sha256", "guardian_version", "diff_engine", "diff_engine_version",
         ];
-        return Bootstrap.Hash(JsonSerializer.Serialize(fields.Select(field => provenance.GetProperty(field).GetString())));
+        var identity = fields.Select(field => provenance.GetProperty(field).GetString());
+        if (provenance.TryGetProperty("ci_provider", out var provider))
+        {
+            identity = identity.Append(provider.GetString())
+                .Append(provenance.TryGetProperty("ci_job_id", out var job) ? job.GetString() : null);
+        }
+        return Bootstrap.Hash(JsonSerializer.Serialize(identity));
     }
 
     private static JsonNode? CanonicalJson(JsonElement root) => root.ValueKind switch

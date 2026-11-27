@@ -17,7 +17,7 @@ internal static class ReviewerSession
         var auth = app.MapGroup("/api/v1/auth");
         auth.MapGet("/csrf", (HttpContext context, IAntiforgery service) =>
             Results.Ok(new { token = service.GetAndStoreTokens(context).RequestToken }));
-        auth.MapPost("/login", Login);
+        auth.MapPost("/login", Login).RequireRateLimiting("reviewer-login");
         auth.MapPost("/logout", async (HttpContext context, IAntiforgery antiforgery) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
