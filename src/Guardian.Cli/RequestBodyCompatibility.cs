@@ -11,7 +11,9 @@ namespace Guardian.Cli;
 
 internal static class RequestBodyCompatibility
 {
-    private const string RuleId = "request-body-additional-properties-disallowed";
+    private const string ClosedObject = "request-body-additional-properties-disallowed";
+    private const string NarrowedProperty = "request-body-optional-property-narrowed";
+    private const string Unproven = "request-body-compatibility-unproven";
     private static readonly Regex PathParameter = new(@"\{[^{}]+\}");
     private static readonly string[] Methods = ["get", "put", "post", "delete", "options", "head", "patch", "trace"];
 
@@ -80,37 +82,82 @@ internal static class RequestBodyCompatibility
         private void CompareSchema(JsonNode? before, JsonNode? after, string method, string path,
             string mediaType, string location, int depth)
         {
-            if (IsBoolean((before as JsonObject)?["readOnly"], true) || IsBoolean((after as JsonObject)?["readOnly"], true)
-                || Resolve(baseline, before, schema: true) is not { } oldSchema
-                || Resolve(candidate, after, schema: true) is not { } newSchema
-                || HasComplexConstraints(oldSchema) || HasComplexConstraints(newSchema)
-                || !_ancestors.Add((oldSchema, newSchema)))
+            if (before is null || after is null
+                || IsBoolean((before as JsonObject)?["readOnly"], true)
+                || IsBoolean((after as JsonObject)?["readOnly"], true))
             {
                 return;
             }
 
-            if (depth > 64 || ++_visited > 65_536)
+            CheckBudget(depth);
+            var oldSchema = Resolve(baseline, before, schema: true);
+            var newSchema = Resolve(candidate, after, schema: true);
+            if (oldSchema is null || newSchema is null
+                || HasComplexConstraints(oldSchema) || HasComplexConstraints(newSchema))
             {
-                throw new EngineException("Request body compatibility analysis exceeded its schema traversal limit.");
+                if (!Equivalent(before, after))
+                {
+                    Finding(Unproven, FindingSeverity.UNKNOWN,
+                        "Compatibility of this changed request schema could not be proven.",
+                        method, path, mediaType, location);
+                }
+                return;
             }
 
-            var oldAdditional = oldSchema["additionalProperties"];
+            if (!_ancestors.Add((oldSchema, newSchema)))
+            {
+                return;
+            }
+
             if (AllowsType(oldSchema, "object") && AllowsType(newSchema, "object"))
             {
-                if ((oldAdditional is null || IsBoolean(oldAdditional, true))
-                    && IsBoolean(newSchema["additionalProperties"], false))
+                var oldAdditional = oldSchema["additionalProperties"];
+                var oldProperties = oldSchema["properties"] as JsonObject;
+                var newProperties = newSchema["properties"] as JsonObject;
+                if (!IsBoolean(oldAdditional, false) && HasRoomForExtraProperty(oldSchema, oldProperties))
                 {
-                    var fingerprint = FindingNormalizer.Fingerprint(
-                        ["guardian-finding-v1", "guardian", RuleId, method, path, mediaType, location]);
-                    _findings.Add(new(RuleId, FindingSeverity.ERR, method, path, "paths", null, null,
-                        $"The {mediaType} request body schema at {location} no longer allows additional properties.", fingerprint));
+                    if (IsBoolean(newSchema["additionalProperties"], false))
+                    {
+                        var definite = IsOpen(oldAdditional) || IsSimpleTypedSchema(Resolve(baseline, oldAdditional));
+                        Finding(definite ? ClosedObject : Unproven,
+                            definite ? FindingSeverity.ERR : FindingSeverity.UNKNOWN,
+                            definite ? "Additional properties are no longer allowed."
+                                : "The previous additional-property schema could not be proven empty.",
+                            method, path, mediaType, location);
+                    }
+
+                    if (newProperties is not null)
+                    {
+                        foreach (var (name, property) in newProperties)
+                        {
+                            if (oldProperties?.ContainsKey(name) == true || IsRequired(newSchema, name)
+                                || IsBoolean((property as JsonObject)?["readOnly"], true)
+                                || Equivalent(oldAdditional ?? JsonValue.Create(true), property))
+                            {
+                                continue;
+                            }
+                            var definition = Resolve(candidate, property, schema: true);
+                            if (IsOpen(oldAdditional) && (IsBoolean(property, true)
+                                || definition?.All(field => IsAnnotation(field.Key)) == true))
+                            {
+                                continue;
+                            }
+                            var definite = IsOpen(oldAdditional) && (IsBoolean(property, false)
+                                || IsSimpleTypedSchema(definition));
+                            Finding(definite ? NarrowedProperty : Unproven,
+                                definite ? FindingSeverity.ERR : FindingSeverity.UNKNOWN,
+                                definite ? "The new optional property restricts previously allowed values."
+                                    : "Compatibility of the new optional property could not be proven.",
+                                method, path, mediaType, PropertyLocation(location, name));
+                        }
+                    }
                 }
-                if (oldSchema["properties"] is JsonObject oldProperties && newSchema["properties"] is JsonObject newProperties)
+                if (oldProperties is not null && newProperties is not null)
                 {
                     foreach (var (name, property) in oldProperties)
                     {
-                        var token = name.Replace("~", "~0", StringComparison.Ordinal).Replace("/", "~1", StringComparison.Ordinal);
-                        CompareSchema(property, newProperties[name], method, path, mediaType, location + "/properties/" + token, depth + 1);
+                        CompareSchema(property, newProperties[name], method, path, mediaType,
+                            PropertyLocation(location, name), depth + 1);
                     }
                 }
             }
@@ -120,7 +167,93 @@ internal static class RequestBodyCompatibility
             }
             _ancestors.Remove((oldSchema, newSchema));
         }
+
+        private void CheckBudget(int depth)
+        {
+            if (depth > 64 || ++_visited > 65_536)
+            {
+                throw new EngineException("Request body compatibility analysis exceeded its schema traversal limit.");
+            }
+        }
+
+        private void Finding(string rule, FindingSeverity severity, string message, string method, string path,
+            string mediaType, string location)
+        {
+            var fingerprint = FindingNormalizer.Fingerprint(
+                ["guardian-finding-v1", "guardian", rule, method, path, mediaType, location]);
+            _findings.Add(new(rule, severity, method, path, "paths", null, null,
+                $"{message} Request body {mediaType} at {location}.", fingerprint));
+        }
+
+        private bool HasRoomForExtraProperty(JsonObject schema, JsonObject? properties)
+        {
+            if (schema["maxProperties"] is not JsonValue cap || !cap.TryGetValue<int>(out var maximum))
+            {
+                return true;
+            }
+            var occupied = (schema["required"] as JsonArray)?.Count(name => name is JsonValue key
+                && key.TryGetValue<string>(out var value)
+                && !IsBoolean(Resolve(baseline, properties?[value])?["readOnly"], true)) ?? 0;
+            return occupied < maximum;
+        }
+
+        private bool Equivalent(JsonNode? before, JsonNode? after) =>
+            JsonNode.DeepEquals(ValidationShape(baseline, before, [], 0), ValidationShape(candidate, after, [], 0));
+
+        private JsonNode? ValidationShape(JsonObject document, JsonNode? node, HashSet<JsonObject> ancestors, int depth)
+        {
+            CheckBudget(depth);
+            if (node is not JsonObject schema)
+            {
+                return node?.DeepClone();
+            }
+            if (!ancestors.Add(schema))
+            {
+                return JsonValue.Create("$recursive");
+            }
+
+            var shape = new JsonObject();
+            foreach (var (key, value) in schema)
+            {
+                if (IsAnnotation(key))
+                {
+                    continue;
+                }
+                shape[key] = (key, value) switch
+                {
+                    ("$ref", _) when Resolve(document, schema) is { } target =>
+                        ValidationShape(document, target, ancestors, depth + 1),
+                    ("properties" or "patternProperties" or "dependentSchemas", JsonObject map) =>
+                        new JsonObject(map.Select(item => KeyValuePair.Create(item.Key,
+                            ValidationShape(document, item.Value, ancestors, depth + 1)))),
+                    ("allOf" or "anyOf" or "oneOf" or "prefixItems", JsonArray list) =>
+                        new JsonArray(list.Select(item => ValidationShape(document, item, ancestors, depth + 1)).ToArray()),
+                    ("items" or "additionalProperties" or "not" or "if" or "then" or "else" or "contains"
+                       or "propertyNames" or "unevaluatedProperties" or "unevaluatedItems" or "additionalItems", _) =>
+                        ValidationShape(document, value, ancestors, depth + 1),
+                    _ => value?.DeepClone(),
+                };
+            }
+            ancestors.Remove(schema);
+            return shape;
+        }
     }
+
+    private static bool IsOpen(JsonNode? node) => node is null || IsBoolean(node, true);
+
+    private static bool IsAnnotation(string key) =>
+        key is "title" or "description" or "example" or "examples" or "externalDocs" or "$comment";
+
+    private static bool IsSimpleTypedSchema(JsonObject? schema) => schema is not null
+        && schema["type"] is JsonValue value && value.TryGetValue<string>(out var type)
+        && type is "string" or "number" or "integer" or "boolean" or "object" or "array" or "null"
+        && schema.All(field => field.Key is "type" or "nullable" || IsAnnotation(field.Key));
+
+    private static bool IsRequired(JsonObject schema, string name) =>
+        schema["required"] is JsonArray list && list.Any(item => IsString(item, name));
+
+    private static string PropertyLocation(string location, string name) => location + "/properties/"
+        + name.Replace("~", "~0", StringComparison.Ordinal).Replace("/", "~1", StringComparison.Ordinal);
 
     private static bool HasComplexConstraints(JsonObject schema) => IsBoolean(schema["readOnly"], true)
         || schema.Any(field => field.Key is "allOf" or "oneOf" or "anyOf" or "not" or "if" or "then" or "else"
@@ -188,6 +321,9 @@ internal static class RequestBodyCompatibility
             KeyValuePair.Create(((YamlScalarNode)entry.Key).Value ?? "", ReadYaml(entry.Value)))),
         YamlSequenceNode sequence => new JsonArray(sequence.Children.Select(ReadYaml).ToArray()),
         YamlScalarNode { Style: ScalarStyle.Plain } scalar when bool.TryParse(scalar.Value, out var boolean) => JsonValue.Create(boolean),
+        YamlScalarNode { Style: ScalarStyle.Plain } scalar
+            when int.TryParse(scalar.Value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var integer)
+            => JsonValue.Create(integer),
         YamlScalarNode scalar => JsonValue.Create(scalar.Value),
         _ => throw new EngineException("Could not read the validated YAML schema."),
     };

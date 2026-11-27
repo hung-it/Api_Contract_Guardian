@@ -60,6 +60,31 @@ $closedBody = Write-Variant 'closed-body' { param($spec)
     $spec.paths.'/tasks'.post.requestBody.content.'application/json'.schema |
         Add-Member -NotePropertyName additionalProperties -NotePropertyValue $false
 }
+$typedAdditional = Write-Variant 'typed-additional' { param($spec)
+    $spec.paths.'/tasks'.post.requestBody.content.'application/json'.schema |
+        Add-Member -NotePropertyName additionalProperties -NotePropertyValue @{ type = 'string' }
+}
+$closedOptional = Write-Variant 'closed-optional' { param($spec)
+    $schema = $spec.paths.'/tasks'.post.requestBody.content.'application/json'.schema
+    $schema | Add-Member -NotePropertyName additionalProperties -NotePropertyValue $false
+    $schema.properties | Add-Member -NotePropertyName label -NotePropertyValue @{ type = 'string' }
+}
+function Write-ObjectBody([string]$Name, [hashtable]$Schema) {
+    Write-Variant $Name { param($spec)
+        $spec.paths.'/tasks'.post.requestBody.content.'application/json'.schema = $Schema
+    }
+}
+$openObject = @{ type = 'object'; properties = @{ label = @{ type = 'string' } } }
+$closedObject = $openObject + @{ additionalProperties = $false }
+$allOfOpen = Write-ObjectBody 'allof-open' @{ allOf = @($openObject) }
+$allOfClosed = Write-ObjectBody 'allof-closed' @{ allOf = @($closedObject) }
+$allOfAnnotated = Write-ObjectBody 'allof-annotated' @{ allOf = @($openObject + @{ description = 'Updated' }) }
+$capped = @{ required = @('label'); maxProperties = 1 }
+$cappedOpen = Write-ObjectBody 'capped-open' ($openObject + $capped)
+$cappedClosed = Write-ObjectBody 'capped-closed' ($closedObject + $capped)
+$length1 = Write-ObjectBody 'min-length-1' @{ type = 'object'; properties = @{ label = @{ type = 'string'; minLength = 1 } } }
+$length3 = Write-ObjectBody 'min-length-3' @{ type = 'object'; properties = @{ label = @{ type = 'string'; minLength = 3 } } }
+$lengthAbsent = Write-ObjectBody 'min-length-absent' @{ type = 'object'; properties = @{ label = @{ type = 'string' } } }
 $closedBodyReformatted = Join-Path $inputs.FullName 'closed-body-reformatted.json'
 $reformatted = Get-Content -Raw -LiteralPath $closedBody | ConvertFrom-Json
 $reformatted.info | Add-Member -NotePropertyName description -NotePropertyValue 'Moved source lines'
@@ -171,8 +196,26 @@ $goldens = @(
        Code = 0; Status = 'PASS'; Rule = 'new-optional-request-parameter'; Severity = 'INFO'; Method = 'GET'; Path = '/tasks' }
     @{ Name = 'optional-query-info-threshold'; Args = @('compare', '--base', $base31, '--candidate', $optionalQuery, '--policy', $infoThreshold);
        Code = 2; Status = 'FAIL'; Rule = 'new-optional-request-parameter'; Severity = 'INFO'; Method = 'GET'; Path = '/tasks' }
-    @{ Name = 'optional-body'; Args = @('compare', '--base', $base31, '--candidate', $optionalBody);
+    @{ Name = 'optional-body'; Args = @('compare', '--base', $closedBody, '--candidate', $closedOptional);
        Code = 0; Status = 'PASS'; Rule = 'new-optional-request-property'; Severity = 'INFO'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'optional-body-narrowed'; Args = @('compare', '--base', $base31, '--candidate', $optionalBody);
+       Code = 2; Status = 'FAIL'; Rule = 'request-body-optional-property-narrowed'; Severity = 'ERR'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'typed-additional-closed'; Args = @('compare', '--base', $typedAdditional, '--candidate', $closedBody);
+       Code = 2; Status = 'FAIL'; Rule = 'request-body-additional-properties-disallowed'; Severity = 'ERR'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'allof-closure-unproven'; Args = @('compare', '--base', $allOfOpen, '--candidate', $allOfClosed);
+       Code = 2; Status = 'INDETERMINATE'; Rule = 'request-body-compatibility-unproven'; Severity = 'UNKNOWN'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'allof-docs-only'; Args = @('compare', '--base', $allOfOpen, '--candidate', $allOfAnnotated);
+       Code = 0; Status = 'PASS'; Empty = $true }
+    @{ Name = 'capped-object-already-closed'; Args = @('compare', '--base', $cappedOpen, '--candidate', $cappedClosed);
+       Code = 0; Status = 'PASS'; Empty = $true }
+    @{ Name = 'min-length-narrowed'; Args = @('compare', '--base', $length1, '--candidate', $length3);
+       Code = 2; Status = 'FAIL'; Rule = 'request-property-min-length-increased'; Severity = 'ERR'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'min-length-widened'; Args = @('compare', '--base', $length3, '--candidate', $length1);
+       Code = 0; Status = 'PASS' }
+    @{ Name = 'min-length-set'; Args = @('compare', '--base', $lengthAbsent, '--candidate', $length3);
+       Code = 2; Status = 'FAIL'; Rule = 'request-property-min-length-set'; Severity = 'ERR'; Method = 'POST'; Path = '/tasks' }
+    @{ Name = 'min-length-unset'; Args = @('compare', '--base', $length3, '--candidate', $lengthAbsent);
+       Code = 0; Status = 'PASS'; Rule = 'request-property-min-length-unset'; Severity = 'INFO'; Method = 'POST'; Path = '/tasks' }
     @{ Name = 'closed-request-body-json'; Args = @('compare', '--base', $base31, '--candidate', $closedBody,
            '--out', (Join-Path $results.FullName 'closed-body-report'));
        Code = 2; Status = 'FAIL'; FindingCount = 1; Rule = 'request-body-additional-properties-disallowed';
